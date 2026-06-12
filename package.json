@@ -1,26 +1,30 @@
 {
-  "name": "grid-paper",
-  "version": "0.1.0",
+  "name": "grid-paper-monorepo",
+  "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "next": "16.2.9",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "dev": "pnpm --filter @grid-paper/web dev",
+    "build": "pnpm --filter @grid-paper/web build",
+    "lint": "eslint",
+    "format": "prettier --write .",
+    "test": "pnpm --filter @grid-paper/ui test",
+    "test:e2e": "playwright test",
+    "prepare": "husky",
+    "commit": "cz"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
+    "@playwright/test": "^1.60.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "commitizen": "^4.3.1",
+    "cz-conventional-changelog": "^3.3.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
-    "tailwindcss": "^4",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "prettier": "^3.8.4",
     "typescript": "^5"
   }
 }

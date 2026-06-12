@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Scan the library package so its Tailwind classes are included in this build */
+@source "../../../packages/ui";
 
 :root {
   --background: #ffffff;

@@ -1,0 +1,35 @@
+{
+  "name": "@grid-paper/ui",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Embeddable graph-paper drawing canvas for React apps",
+  "exports": {
+    ".": {
+      "default": "./index.ts",
+      "types": "./index.ts"
+    }
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "dependencies": {
+    "js-yaml": "^4.2.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5",
+    "vitest": "^3"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  }
+}
