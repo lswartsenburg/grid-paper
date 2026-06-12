@@ -156,4 +156,91 @@ test.describe('z-order context menu', () => {
       .poll(() => getTopRectWidth(page), { timeout: 3000 })
       .toBeGreaterThan(100);
   });
+
+  /**
+   * Scenario: A (large) drawn first, B (small) drawn second → B initially on
+   * top. "Bring forward" on A should move A one step above B, making A topmost.
+   * (With two shapes, one step == front, but this exercises the menu item.)
+   */
+  test('Bring forward moves shape A one step above shape B', async ({
+    page,
+  }) => {
+    await page.getByTitle('Rectangle').click();
+
+    const canvas = page.locator('.touch-none').first();
+    const box = await canvas.boundingBox();
+    expect(box).not.toBeNull();
+    const cx = box!.x + box!.width / 2;
+    const cy = box!.y + box!.height / 2;
+    const halfW = box!.width / 2;
+
+    // Rect A: large, ±100 px. Left edge is well outside B (±20 px).
+    const aLeftCanvasPx = snapPx(halfW - 100);
+    const clickNearALeft = box!.x + aLeftCanvasPx + 2;
+
+    // Draw A first (large), B second (small → on top).
+    await drawRect(page, cx - 100, cy - 60, cx + 100, cy + 60);
+    await drawRect(page, cx - 20, cy - 20, cx + 20, cy + 20);
+
+    // B (small) is initially topmost.
+    const initialTopWidth = await getTopRectWidth(page);
+    expect(initialTopWidth).toBeLessThan(100);
+
+    await activateSelectTool(page);
+
+    // Right-click 2 px inside A's left edge (outside B's range) → context menu for A.
+    await page.mouse.click(clickNearALeft, cy, { button: 'right' });
+    await expect(page.getByText('Bring forward')).toBeVisible();
+
+    await page.getByText('Bring forward').click();
+    await expect(page.getByText('Bring forward')).not.toBeVisible();
+
+    // After bring-forward: A (large) is now the topmost rect in the DOM.
+    await expect
+      .poll(() => getTopRectWidth(page), { timeout: 3000 })
+      .toBeGreaterThan(100);
+  });
+
+  /**
+   * Scenario: same setup — B on top. "Send backward" on B should move it one
+   * step behind A, making A the topmost rendered element.
+   */
+  test('Send backward moves shape B one step behind shape A', async ({
+    page,
+  }) => {
+    await page.getByTitle('Rectangle').click();
+
+    const canvas = page.locator('.touch-none').first();
+    const box = await canvas.boundingBox();
+    expect(box).not.toBeNull();
+    const cx = box!.x + box!.width / 2;
+    const cy = box!.y + box!.height / 2;
+    const halfW = box!.width / 2;
+
+    // Rect B: small, ±20 px. Left edge in canvas pixels after snap.
+    const bLeftCanvasPx = snapPx(halfW - 20);
+    const clickNearBLeft = box!.x + bLeftCanvasPx + 2;
+
+    // Draw A first (large), B second (small → on top).
+    await drawRect(page, cx - 100, cy - 60, cx + 100, cy + 60);
+    await drawRect(page, cx - 20, cy - 20, cx + 20, cy + 20);
+
+    // B (small) is initially topmost.
+    const initialTopWidth = await getTopRectWidth(page);
+    expect(initialTopWidth).toBeLessThan(100);
+
+    await activateSelectTool(page);
+
+    // Right-click 2 px inside B's left edge → context menu for B.
+    await page.mouse.click(clickNearBLeft, cy, { button: 'right' });
+    await expect(page.getByText('Send backward')).toBeVisible();
+
+    await page.getByText('Send backward').click();
+    await expect(page.getByText('Send backward')).not.toBeVisible();
+
+    // After send-backward: A (large) is now the topmost rect in the DOM.
+    await expect
+      .poll(() => getTopRectWidth(page), { timeout: 3000 })
+      .toBeGreaterThan(100);
+  });
 });

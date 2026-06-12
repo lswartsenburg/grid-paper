@@ -1,19 +1,17 @@
 'use client';
 
 import {
-  useMemo,
   useState,
+  useMemo,
   useCallback,
   useEffect,
   useRef,
   useLayoutEffect,
 } from 'react';
-import { createDocument, collectKeys } from '../../lib/drawing/useDrawingState';
+import { collectKeys } from '../../lib/drawing/useDrawingState';
 import { useCanvasHistory } from '../../lib/drawing/useCanvasHistory';
-import {
-  loadFromStorage,
-  useStorageAdapter,
-} from '../../lib/storage/useStorageAdapter';
+import { useStorageAdapter } from '../../lib/storage/useStorageAdapter';
+import type { StorageAdapter } from '../../lib/storage/StorageAdapter';
 import { useActiveTool } from '../../lib/tools/useActiveTool';
 import { hitTestDocument, shapeBounds } from '../../lib/canvas/hitTest';
 import {
@@ -182,8 +180,14 @@ function computeResizedCircle(original: CircleShape, pos: Point): CircleShape {
   return { ...original, radius: newRadius };
 }
 
-export default function CanvasEditor() {
-  const initialDoc = useMemo(() => loadFromStorage() ?? createDocument(), []);
+interface CanvasEditorProps {
+  /** Document to open. Provided by the parent after async load. */
+  initialDoc: DrawingDocument;
+  /** Storage backend used to auto-save on every change. */
+  adapter: StorageAdapter;
+}
+
+export default function CanvasEditor({ initialDoc, adapter }: CanvasEditorProps) {
   const { doc, dispatch, undo, redo, canUndo, canRedo } =
     useCanvasHistory(initialDoc);
   const [activePanel, setActivePanel] = useState<string | null>(null);
@@ -262,7 +266,7 @@ export default function CanvasEditor() {
   }, []);
 
   const tool = useActiveTool(dispatch, activeLayerId);
-  useStorageAdapter(doc);
+  useStorageAdapter(doc, adapter);
 
   // Keeps the latest snap settings available inside stable pointer callbacks.
   const snapSettingsRef = useRef(tool.settings);
@@ -839,6 +843,10 @@ export default function CanvasEditor() {
           canRedo={canRedo}
           onUndo={undo}
           onRedo={redo}
+          gridConfig={doc.gridConfig}
+          onGridConfigChange={(patch) =>
+            dispatch({ type: 'UPDATE_GRID_CONFIG', patch })
+          }
           onZoomChange={(newZoom) => {
             const el = containerRef.current;
             if (el) {

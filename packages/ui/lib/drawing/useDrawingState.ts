@@ -65,6 +65,13 @@ export type DrawingAction =
       shapeId: string;
       /** Pass undefined to remove the key entirely. */
       key: string | undefined;
+    }
+  | {
+      type: 'UPDATE_SHAPE_LABEL';
+      layerId: string;
+      shapeId: string;
+      /** Pass undefined or empty string to remove the label. */
+      label: string | undefined;
     };
 
 // --- Recursive item helpers ---
@@ -358,6 +365,23 @@ function reducer(
         }))
       );
 
+    case 'UPDATE_SHAPE_LABEL':
+      return stamp(
+        mapLayer(state, action.layerId, (l) => ({
+          ...l,
+          items: mapItemsDeep(l.items, (item) => {
+            if (item.id !== action.shapeId) return item;
+            if (!action.label) {
+              const { label: _removed, ...rest } = item as typeof item & {
+                label?: string;
+              };
+              return rest as LayerItem;
+            }
+            return { ...item, label: action.label };
+          }),
+        }))
+      );
+
     default:
       return state;
   }
@@ -375,7 +399,7 @@ export function createDocument(
     createdAt: now,
     updatedAt: now,
     viewport: { zoom: 1, panOffset: { x: 0, y: 0 } },
-    gridConfig: { majorEvery: 5 },
+    gridConfig: { majorEvery: 5, snapToGrid: true, cellSize: 1 },
     layers: [
       {
         id: crypto.randomUUID(),

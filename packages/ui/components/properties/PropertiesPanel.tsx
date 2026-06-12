@@ -90,12 +90,14 @@ export default function PropertiesPanel({
   // to keep the undo history clean.
   const [keyDraft, setKeyDraft] = useState(shape?.key ?? '');
   const [keyError, setKeyError] = useState<string | null>(null);
+  const [labelDraft, setLabelDraft] = useState(shape?.label ?? '');
 
-  // Reset draft and error whenever the selected shape changes.
+  // Reset drafts whenever the selected shape changes.
   useEffect(() => {
     setKeyDraft(shape?.key ?? '');
     setKeyError(null);
-  }, [shape?.id, shape?.key]);
+    setLabelDraft(shape?.label ?? '');
+  }, [shape?.id, shape?.key, shape?.label]);
 
   if (!shape || !layerId) {
     return (
@@ -113,6 +115,17 @@ export default function PropertiesPanel({
       layerId: layerId!,
       shapeId: shape!.id,
       patch,
+    });
+  }
+
+  function commitLabel(value: string) {
+    const trimmed = value.trim();
+    if (trimmed === (shape!.label ?? '')) return;
+    dispatch({
+      type: 'UPDATE_SHAPE_LABEL',
+      layerId: layerId!,
+      shapeId: shape!.id,
+      label: trimmed === '' ? undefined : trimmed,
     });
   }
 
@@ -140,6 +153,28 @@ export default function PropertiesPanel({
       <div className="px-3 pb-2 text-xs text-zinc-400 uppercase tracking-wide font-semibold">
         {shape.type}
       </div>
+
+      <Row label="Label">
+        <input
+          type="text"
+          value={labelDraft}
+          placeholder="none"
+          onChange={(e) => setLabelDraft(e.target.value)}
+          onBlur={(e) => commitLabel(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              commitLabel((e.target as HTMLInputElement).value);
+              (e.target as HTMLInputElement).blur();
+            }
+            if (e.key === 'Escape') {
+              setLabelDraft(shape.label ?? '');
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
+          className="w-full text-xs border border-zinc-200 rounded px-1.5 py-1 text-zinc-700 placeholder-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-400"
+          title="Text label rendered at the center of the shape"
+        />
+      </Row>
 
       <Row label="Key">
         <div className="flex flex-col gap-0.5 flex-1 min-w-0">
@@ -180,11 +215,9 @@ export default function PropertiesPanel({
       </Row>
 
       <Row label="Stroke">
-        <input
-          type="color"
+        <ColorSwatch
           value={shape.strokeColor}
-          onChange={(e) => update({ strokeColor: e.target.value })}
-          className="w-7 h-7 rounded cursor-pointer border border-zinc-200 p-0.5 bg-white"
+          onChange={(color) => update({ strokeColor: color })}
           title="Stroke color"
         />
         <input
@@ -202,13 +235,9 @@ export default function PropertiesPanel({
 
       {hasFill && (
         <Row label="Fill">
-          <input
-            type="color"
-            value={
-              shape.fillColor === 'transparent' ? '#ffffff' : shape.fillColor
-            }
-            onChange={(e) => update({ fillColor: e.target.value })}
-            className="w-7 h-7 rounded cursor-pointer border border-zinc-200 p-0.5 bg-white"
+          <ColorSwatch
+            value={shape.fillColor}
+            onChange={(color) => update({ fillColor: color })}
             title="Fill color"
           />
           <button

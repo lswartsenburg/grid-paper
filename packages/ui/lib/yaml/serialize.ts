@@ -39,6 +39,7 @@ function shapeLines(shape: VectorShape, level: number): string[] {
       : null;
 
   if (shape.key !== undefined) lines.push(`${i}key: "${shape.key}"`);
+  if (shape.label !== undefined) lines.push(`${i}label: "${shape.label}"`);
 
   switch (shape.type) {
     case 'line':
@@ -135,9 +136,16 @@ export function serializeToYaml(doc: DrawingDocument): string {
 
   lines.push(`title: "${doc.title}"`);
 
-  if (doc.gridConfig.majorEvery !== 5) {
+  const gc = doc.gridConfig;
+  const gridLines: string[] = [];
+  if (gc.majorEvery !== 5) gridLines.push(`  majorEvery: ${gc.majorEvery}`);
+  if (!gc.snapToGrid) gridLines.push(`  snapToGrid: false`);
+  if (gc.unit !== undefined) gridLines.push(`  unit: "${gc.unit}"`);
+  if (gc.unit !== undefined && gc.cellSize !== 1)
+    gridLines.push(`  cellSize: ${gc.cellSize}`);
+  if (gridLines.length > 0) {
     lines.push(`grid:`);
-    lines.push(`  majorEvery: ${doc.gridConfig.majorEvery}`);
+    lines.push(...gridLines);
   }
 
   lines.push(`layers:`);

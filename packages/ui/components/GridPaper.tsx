@@ -1,6 +1,12 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import CanvasEditor from './canvas/CanvasEditor';
+import {
+  getDefaultAdapter,
+  loadInitialDocument,
+} from '../lib/storage/useStorageAdapter';
+import type { StorageAdapter } from '../lib/storage/StorageAdapter';
 import type { DrawingDocument } from '../types/canvas';
 
 /**
@@ -21,14 +27,21 @@ import type { DrawingDocument } from '../types/canvas';
  */
 export interface GridPaperProps {
   /**
-   * Optional initial document to pre-populate the canvas.
-   * When omitted the editor starts with a blank document.
+   * Storage backend to use. Defaults to the built-in `IndexedDBAdapter`.
+   * Swap this for an API-backed adapter when a backend is available.
    */
-  initialDocument?: DrawingDocument;
+  adapter?: StorageAdapter;
+
+  /**
+   * ID of the document to open. When omitted the most recently modified
+   * document is loaded; a blank document is created when none exist yet.
+   */
+  documentId?: string;
 
   /**
    * Called whenever the document changes (shape drawn, layer edited, etc.).
-   * Use this to persist the document in your own storage layer.
+   * Use this when you need to react to changes from outside the component.
+   * Persistence is handled automatically by the `adapter`.
    */
   onDocumentChange?: (doc: DrawingDocument) => void;
 
@@ -38,12 +51,43 @@ export interface GridPaperProps {
 
 /**
  * Self-contained graph-paper drawing canvas.
- * All state is managed internally; mount it and it just works.
+ * Resolves the initial document asynchronously, then mounts `CanvasEditor`.
  */
-export default function GridPaper({ className }: GridPaperProps) {
+export default function GridPaper({
+  adapter,
+  documentId,
+  className,
+}: GridPaperProps) {
+  const resolvedAdapter = adapter ?? getDefaultAdapter();
+  const [initialDoc, setInitialDoc] = useState<DrawingDocument | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadInitialDocument(resolvedAdapter, documentId).then((doc) => {
+      if (!cancelled) setInitialDoc(doc);
+    });
+    // Cancel a stale load when React StrictMode unmounts and remounts this
+    // effect so the first (cancelled) call never calls setInitialDoc.
+    return () => {
+      cancelled = true;
+    };
+    // Re-run only when the adapter instance or target document id changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedAdapter, documentId]);
+
+  const rootClass = `flex overflow-hidden${className ? ` ${className}` : ''}`;
+
+  if (!initialDoc) {
+    return (
+      <div className={`${rootClass} items-center justify-center`}>
+        <span className="text-sm text-zinc-400">Loading…</span>
+      </div>
+    );
+  }
+
   return (
-    <div className={`flex overflow-hidden${className ? ` ${className}` : ''}`}>
-      <CanvasEditor />
+    <div className={rootClass}>
+      <CanvasEditor initialDoc={initialDoc} adapter={resolvedAdapter} />
     </div>
   );
 }

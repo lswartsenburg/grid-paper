@@ -40,6 +40,7 @@ function parseItem(raw: YamlItem): LayerItem {
   const base = {
     id: crypto.randomUUID(),
     ...(raw.key !== undefined && { key: raw.key }),
+    ...(raw.label !== undefined && { label: raw.label }),
     strokeColor: raw.stroke ?? DEFAULT_STROKE,
     strokeWidth: raw.strokeWidth ?? DEFAULT_STROKE_WIDTH,
   };
@@ -154,6 +155,13 @@ export function parseYaml(
 
     const gridConfig: GridConfig = {
       majorEvery: yaml.grid?.majorEvery ?? current.gridConfig.majorEvery,
+      snapToGrid: yaml.grid?.snapToGrid ?? current.gridConfig.snapToGrid,
+      cellSize: yaml.grid?.cellSize ?? current.gridConfig.cellSize,
+      ...(yaml.grid?.unit !== undefined
+        ? { unit: yaml.grid.unit }
+        : current.gridConfig.unit !== undefined
+          ? { unit: current.gridConfig.unit }
+          : {}),
     };
 
     const viewport: Viewport = current.viewport;
