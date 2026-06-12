@@ -1,4 +1,9 @@
-import type { DrawingDocument, Layer, LayerItem, VectorShape } from '../../types/canvas';
+import type {
+  DrawingDocument,
+  Layer,
+  LayerItem,
+  VectorShape,
+} from '../../types/canvas';
 
 // Writes YAML manually for full control over formatting.
 // Coordinate pairs are always inline [x, y]; shape blocks are always
@@ -25,9 +30,13 @@ function shapeLines(shape: VectorShape, level: number): string[] {
   const lines: string[] = [];
 
   const strokeLine =
-    shape.strokeColor !== '#1a1a1a' ? `${i}stroke: ${color(shape.strokeColor)}` : null;
+    shape.strokeColor !== '#1a1a1a'
+      ? `${i}stroke: ${color(shape.strokeColor)}`
+      : null;
   const widthLine =
-    shape.strokeWidth !== 1.5 ? `${i}strokeWidth: ${round(shape.strokeWidth)}` : null;
+    shape.strokeWidth !== 1.5
+      ? `${i}strokeWidth: ${round(shape.strokeWidth)}`
+      : null;
 
   switch (shape.type) {
     case 'line':
@@ -37,24 +46,30 @@ function shapeLines(shape: VectorShape, level: number): string[] {
       break;
     case 'polyline':
       lines.push(`${i}type: polyline`);
-      lines.push(`${i}points: [${shape.points.map((p) => pt(p.x, p.y)).join(', ')}]`);
+      lines.push(
+        `${i}points: [${shape.points.map((p) => pt(p.x, p.y)).join(', ')}]`
+      );
       break;
     case 'circle':
       lines.push(`${i}type: circle`);
       lines.push(`${i}center: ${pt(shape.center.x, shape.center.y)}`);
       lines.push(`${i}radius: ${round(shape.radius)}`);
-      if (shape.fillColor !== 'transparent') lines.push(`${i}fill: ${color(shape.fillColor)}`);
+      if (shape.fillColor !== 'transparent')
+        lines.push(`${i}fill: ${color(shape.fillColor)}`);
       break;
     case 'rect':
       lines.push(`${i}type: rect`);
       lines.push(`${i}origin: ${pt(shape.origin.x, shape.origin.y)}`);
       lines.push(`${i}width: ${round(shape.width)}`);
       lines.push(`${i}height: ${round(shape.height)}`);
-      if (shape.fillColor !== 'transparent') lines.push(`${i}fill: ${color(shape.fillColor)}`);
+      if (shape.fillColor !== 'transparent')
+        lines.push(`${i}fill: ${color(shape.fillColor)}`);
       break;
     case 'freehand':
       lines.push(`${i}type: freehand`);
-      lines.push(`${i}points: [${shape.points.map((p) => pt(p.x, p.y)).join(', ')}]`);
+      lines.push(
+        `${i}points: [${shape.points.map((p) => pt(p.x, p.y)).join(', ')}]`
+      );
       break;
   }
 

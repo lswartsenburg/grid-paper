@@ -15,22 +15,50 @@ import type {
 export type DrawingAction =
   | { type: 'ADD_LAYER'; layer: Layer }
   | { type: 'DELETE_LAYER'; layerId: string }
-  | { type: 'UPDATE_LAYER'; layerId: string; patch: Partial<Pick<Layer, 'name' | 'visible' | 'locked'>> }
+  | {
+      type: 'UPDATE_LAYER';
+      layerId: string;
+      patch: Partial<Pick<Layer, 'name' | 'visible' | 'locked'>>;
+    }
   | { type: 'REORDER_LAYERS'; orderedIds: string[] }
   | { type: 'ADD_SHAPE'; layerId: string; shape: VectorShape; groupId?: string }
   | { type: 'REPLACE_SHAPE'; layerId: string; shape: VectorShape }
   | { type: 'DELETE_SHAPE'; layerId: string; shapeId: string }
-  | { type: 'GROUP_SHAPES'; layerId: string; shapeIds: string[]; groupId: string; groupName: string }
+  | {
+      type: 'GROUP_SHAPES';
+      layerId: string;
+      shapeIds: string[];
+      groupId: string;
+      groupName: string;
+    }
   | { type: 'UNGROUP'; layerId: string; groupId: string }
-  | { type: 'REORDER_ITEMS'; layerId: string; orderedIds: string[]; groupId?: string }
+  | {
+      type: 'REORDER_ITEMS';
+      layerId: string;
+      orderedIds: string[];
+      groupId?: string;
+    }
   | { type: 'ADD_ANNOTATION'; layerId: string; annotation: Annotation }
   | { type: 'DELETE_ANNOTATION'; layerId: string; annotationId: string }
   | { type: 'UPDATE_VIEWPORT'; patch: Partial<Viewport> }
   | { type: 'UPDATE_GRID_CONFIG'; patch: Partial<GridConfig> }
   | { type: 'UPDATE_METADATA'; patch: Partial<Pick<DrawingDocument, 'title'>> }
   | { type: 'LOAD_DOCUMENT'; document: DrawingDocument }
-  | { type: 'TRANSLATE_SHAPES'; layerId: string; shapeIds: string[]; dx: number; dy: number }
-  | { type: 'UPDATE_SHAPE_STYLE'; layerId: string; shapeId: string; patch: Partial<Pick<VectorShape, 'strokeColor' | 'strokeWidth'>> & { fillColor?: string } };
+  | {
+      type: 'TRANSLATE_SHAPES';
+      layerId: string;
+      shapeIds: string[];
+      dx: number;
+      dy: number;
+    }
+  | {
+      type: 'UPDATE_SHAPE_STYLE';
+      layerId: string;
+      shapeId: string;
+      patch: Partial<Pick<VectorShape, 'strokeColor' | 'strokeWidth'>> & {
+        fillColor?: string;
+      };
+    };
 
 // --- Recursive item helpers ---
 
@@ -66,8 +94,12 @@ function reorderWithinGroup(
 ): LayerItem[] {
   return items.map((item) => {
     if (item.type !== 'group') return item;
-    if (item.id === groupId) return { ...item, children: reorderById(item.children, orderedIds) };
-    return { ...item, children: reorderWithinGroup(item.children, groupId, orderedIds) };
+    if (item.id === groupId)
+      return { ...item, children: reorderById(item.children, orderedIds) };
+    return {
+      ...item,
+      children: reorderWithinGroup(item.children, groupId, orderedIds),
+    };
   });
 }
 
@@ -85,7 +117,8 @@ function groupItems(
   items.forEach((item, i) => {
     if (shapeIds.has(item.id)) {
       collected.push(item);
-      if (insertIndex === -1) insertIndex = i - (items.length - remaining.length - 1);
+      if (insertIndex === -1)
+        insertIndex = i - (items.length - remaining.length - 1);
     } else {
       remaining.push(item);
     }
@@ -108,7 +141,11 @@ function ungroupItems(items: LayerItem[], groupId: string): LayerItem[] {
 
 import type { Point } from '../../types/canvas';
 
-function translateShape(shape: VectorShape, dx: number, dy: number): VectorShape {
+function translateShape(
+  shape: VectorShape,
+  dx: number,
+  dy: number
+): VectorShape {
   const tp = (p: Point): Point => ({ x: p.x + dx, y: p.y + dy });
   switch (shape.type) {
     case 'line':
@@ -140,7 +177,10 @@ function mapLayer(
   };
 }
 
-function reducer(state: DrawingDocument, action: DrawingAction): DrawingDocument {
+function reducer(
+  state: DrawingDocument,
+  action: DrawingAction
+): DrawingDocument {
   switch (action.type) {
     case 'ADD_LAYER':
       return stamp({ ...state, layers: [...state.layers, action.layer] });
@@ -246,7 +286,9 @@ function reducer(state: DrawingDocument, action: DrawingAction): DrawingDocument
       return stamp(
         mapLayer(state, action.layerId, (l) => ({
           ...l,
-          annotations: l.annotations.filter((a) => a.id !== action.annotationId),
+          annotations: l.annotations.filter(
+            (a) => a.id !== action.annotationId
+          ),
         }))
       );
 
@@ -254,7 +296,10 @@ function reducer(state: DrawingDocument, action: DrawingAction): DrawingDocument
       return { ...state, viewport: { ...state.viewport, ...action.patch } };
 
     case 'UPDATE_GRID_CONFIG':
-      return stamp({ ...state, gridConfig: { ...state.gridConfig, ...action.patch } });
+      return stamp({
+        ...state,
+        gridConfig: { ...state.gridConfig, ...action.patch },
+      });
 
     case 'UPDATE_METADATA':
       return stamp({ ...state, ...action.patch });
@@ -282,7 +327,8 @@ function reducer(state: DrawingDocument, action: DrawingAction): DrawingDocument
         mapLayer(state, action.layerId, (l) => ({
           ...l,
           items: mapItemsDeep(l.items, (item) => {
-            if (item.id !== action.shapeId || item.type === 'group') return item;
+            if (item.id !== action.shapeId || item.type === 'group')
+              return item;
             return { ...item, ...action.patch };
           }),
         }))
@@ -295,7 +341,9 @@ function reducer(state: DrawingDocument, action: DrawingAction): DrawingDocument
 
 // --- Public API ---
 
-export function createDocument(overrides?: Partial<DrawingDocument>): DrawingDocument {
+export function createDocument(
+  overrides?: Partial<DrawingDocument>
+): DrawingDocument {
   const now = new Date().toISOString();
   return {
     id: crypto.randomUUID(),

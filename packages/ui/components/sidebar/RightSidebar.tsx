@@ -26,7 +26,11 @@ interface Props {
  * The icon strip is always visible; the panel slides in to its left when open.
  * Hidden by default (activePanel = null).
  */
-export default function RightSidebar({ panels, activePanel, onTogglePanel }: Props) {
+export default function RightSidebar({
+  panels,
+  activePanel,
+  onTogglePanel,
+}: Props) {
   const active = panels.find((p) => p.id === activePanel);
 
   return (
@@ -37,7 +41,9 @@ export default function RightSidebar({ panels, activePanel, onTogglePanel }: Pro
           <div className="px-3 py-2 text-xs font-semibold text-zinc-500 uppercase tracking-wide border-b border-zinc-100 shrink-0 select-none">
             {active.label}
           </div>
-          <div className="flex flex-col flex-1 overflow-hidden">{active.content}</div>
+          <div className="flex flex-col flex-1 overflow-hidden">
+            {active.content}
+          </div>
         </div>
       )}
 

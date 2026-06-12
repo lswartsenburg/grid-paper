@@ -1,9 +1,19 @@
 'use client';
 
-import { useMemo, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
+import {
+  useMemo,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  useLayoutEffect,
+} from 'react';
 import { createDocument } from '../../lib/drawing/useDrawingState';
 import { useCanvasHistory } from '../../lib/drawing/useCanvasHistory';
-import { loadFromStorage, useStorageAdapter } from '../../lib/storage/useStorageAdapter';
+import {
+  loadFromStorage,
+  useStorageAdapter,
+} from '../../lib/storage/useStorageAdapter';
 import { useActiveTool } from '../../lib/tools/useActiveTool';
 import { hitTestDocument, shapeBounds } from '../../lib/canvas/hitTest';
 import { BASE_UNIT } from '../../lib/canvas/coordinates';
@@ -17,7 +27,13 @@ import YamlEditor from '../editor/YamlEditor';
 import PropertiesPanel from '../properties/PropertiesPanel';
 import RightSidebar from '../sidebar/RightSidebar';
 import type { SidebarPanel } from '../sidebar/RightSidebar';
-import type { DrawingDocument, LayerItem, Point, RectShape, VectorShape } from '../../types/canvas';
+import type {
+  DrawingDocument,
+  LayerItem,
+  Point,
+  RectShape,
+  VectorShape,
+} from '../../types/canvas';
 
 // ─── Resize helpers ───────────────────────────────────────────────────────────
 
@@ -225,8 +241,15 @@ export default function CanvasEditor() {
 
   const handleSelectPointerMove = useCallback((pos: Point) => {
     // Active resize mode.
-    if (resizeCornerRef.current !== null && resizeOriginalRef.current !== null) {
-      const patch = computeResizedRect(resizeOriginalRef.current, resizeCornerRef.current, pos);
+    if (
+      resizeCornerRef.current !== null &&
+      resizeOriginalRef.current !== null
+    ) {
+      const patch = computeResizedRect(
+        resizeOriginalRef.current,
+        resizeCornerRef.current,
+        pos
+      );
       const preview: RectShape = { ...resizeOriginalRef.current, ...patch };
       resizePreviewRef.current = preview;
       setResizePreview(preview);
@@ -300,9 +323,21 @@ export default function CanvasEditor() {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const mod = e.metaKey || e.ctrlKey;
-      if (mod && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
-      if (mod && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); redo(); return; }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectionLayerId && selectedShapeIds.length > 0) {
+      if (mod && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+        return;
+      }
+      if (mod && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        redo();
+        return;
+      }
+      if (
+        (e.key === 'Delete' || e.key === 'Backspace') &&
+        selectionLayerId &&
+        selectedShapeIds.length > 0
+      ) {
         e.preventDefault();
         selectedShapeIds.forEach((shapeId) =>
           dispatch({ type: 'DELETE_SHAPE', layerId: selectionLayerId, shapeId })
@@ -314,14 +349,23 @@ export default function CanvasEditor() {
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, selectionLayerId, selectedShapeIds, dispatch, clearSelection]);
+  }, [
+    undo,
+    redo,
+    selectionLayerId,
+    selectedShapeIds,
+    dispatch,
+    clearSelection,
+  ]);
 
   // When the YAML editor produces a fully-parsed document, replace state entirely.
   const handleYamlDocument = useCallback(
     (next: DrawingDocument) => {
       dispatch({ type: 'UPDATE_METADATA', patch: { title: next.title } });
       dispatch({ type: 'UPDATE_GRID_CONFIG', patch: next.gridConfig });
-      doc.layers.forEach((l) => dispatch({ type: 'DELETE_LAYER', layerId: l.id }));
+      doc.layers.forEach((l) =>
+        dispatch({ type: 'DELETE_LAYER', layerId: l.id })
+      );
       next.layers.forEach((l) => dispatch({ type: 'ADD_LAYER', layer: l }));
       setSelectedLayerId(next.layers[0]?.id ?? null);
     },
@@ -337,7 +381,10 @@ export default function CanvasEditor() {
     const result: VectorShape[] = [];
     function collect(items: LayerItem[]) {
       for (const item of items) {
-        if (item.type === 'group') { collect(item.children); continue; }
+        if (item.type === 'group') {
+          collect(item.children);
+          continue;
+        }
         if (ids.has(item.id)) result.push(item);
       }
     }
@@ -353,17 +400,26 @@ export default function CanvasEditor() {
   // When switching away from the select tool, revert to crosshair.
   useEffect(() => {
     updateCursor(isSelectTool ? 'default' : 'crosshair');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSelectTool]);
   const activeLayer = doc.layers.find((l) => l.id === activeLayerId);
   const toolReady = !isSelectTool && !!activeLayer && !activeLayer.locked;
 
-  const pointerDown = isSelectTool ? handleSelectPointerDown
-    : (toolReady ? tool.handlePointerDown : undefined);
-  const pointerMove = isSelectTool ? handleSelectPointerMove
-    : (toolReady ? (pos: Point) => tool.handlePointerMove(pos) : undefined);
-  const pointerUp = isSelectTool ? handleSelectPointerUp
-    : (toolReady ? tool.handlePointerUp : undefined);
+  const pointerDown = isSelectTool
+    ? handleSelectPointerDown
+    : toolReady
+      ? tool.handlePointerDown
+      : undefined;
+  const pointerMove = isSelectTool
+    ? handleSelectPointerMove
+    : toolReady
+      ? (pos: Point) => tool.handlePointerMove(pos)
+      : undefined;
+  const pointerUp = isSelectTool
+    ? handleSelectPointerUp
+    : toolReady
+      ? tool.handlePointerUp
+      : undefined;
 
   // --- Sidebar panels ---
   const panels: SidebarPanel[] = [
@@ -371,7 +427,13 @@ export default function CanvasEditor() {
       id: 'layers',
       label: 'Layers',
       icon: (
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+        <svg
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        >
           <rect x="2" y="10" width="12" height="3" rx="0.5" />
           <rect x="2" y="6.5" width="12" height="3" rx="0.5" />
           <rect x="2" y="3" width="12" height="3" rx="0.5" />
@@ -390,7 +452,14 @@ export default function CanvasEditor() {
       id: 'properties',
       label: 'Properties',
       icon: (
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <circle cx="8" cy="8" r="5" />
           <line x1="8" y1="5" x2="8" y2="8.5" />
           <circle cx="8" cy="11" r="0.75" fill="currentColor" stroke="none" />
@@ -408,13 +477,22 @@ export default function CanvasEditor() {
       id: 'yaml',
       label: 'YAML',
       icon: (
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <polyline points="5,4 2,8 5,12" />
           <polyline points="11,4 14,8 11,12" />
           <line x1="9" y1="3" x2="7" y2="13" />
         </svg>
       ),
-      content: <YamlEditor document={doc} onDocumentChange={handleYamlDocument} />,
+      content: (
+        <YamlEditor document={doc} onDocumentChange={handleYamlDocument} />
+      ),
     },
   ];
 
@@ -431,7 +509,9 @@ export default function CanvasEditor() {
         <GridCanvas
           viewport={doc.viewport}
           majorEvery={doc.gridConfig.majorEvery}
-          onViewportChange={(patch) => dispatch({ type: 'UPDATE_VIEWPORT', patch })}
+          onViewportChange={(patch) =>
+            dispatch({ type: 'UPDATE_VIEWPORT', patch })
+          }
           onPointerDown={pointerDown}
           onPointerMove={pointerMove}
           onPointerUp={pointerUp}
@@ -461,7 +541,11 @@ export default function CanvasEditor() {
         </GridCanvas>
       </div>
 
-      <RightSidebar panels={panels} activePanel={activePanel} onTogglePanel={togglePanel} />
+      <RightSidebar
+        panels={panels}
+        activePanel={activePanel}
+        onTogglePanel={togglePanel}
+      />
     </div>
   );
 }

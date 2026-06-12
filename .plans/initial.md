@@ -5,6 +5,7 @@ This roadmap focuses entirely on building a highly modular, decoupled frontend f
 ---
 
 ## Phase 1: Core Framework Setup & Architecture Base
+
 **Goal:** Establish a robust project foundation with strict TypeScript definitions, local state infrastructure, and decoupled storage abstractions.
 
 - [x] **Next.js & Workspace Initialization**
@@ -22,6 +23,7 @@ This roadmap focuses entirely on building a highly modular, decoupled frontend f
 ---
 
 ## Phase 2: Visual Grid & Render Pipeline
+
 **Goal:** Render a high-fidelity, performance-optimized visual graph paper layer that dynamically scales and tracks interactions.
 
 - [x] **Infinite Paper Grid Rendering Component**
@@ -35,6 +37,7 @@ This roadmap focuses entirely on building a highly modular, decoupled frontend f
 ---
 
 ## Phase 3: Layered Creation & Data Engine
+
 **Goal:** Build the engine that lets users draw separate elements on explicit layers and update them immutably.
 
 - [x] **Multi-Layer State Composition Stack**
@@ -49,6 +52,7 @@ This roadmap focuses entirely on building a highly modular, decoupled frontend f
 ---
 
 ## Phase 4: Object Selection, Interaction & Manipulation
+
 **Goal:** Allow users to cleanly select existing items on any unlocked layer, modify them in real-time, and undo changes.
 
 - [ ] **Vector Proximity & Bounding-Box Hit Testing**
@@ -63,6 +67,7 @@ This roadmap focuses entirely on building a highly modular, decoupled frontend f
 ---
 
 ## Phase 5: Export Systems & Contributor Guardrails
+
 **Goal:** Package the standalone frontend tool for production distribution and verify it is completely open-source ready.
 
 - [ ] **Standalone Compilation & Static Exporters**
@@ -80,6 +85,7 @@ This roadmap focuses entirely on building a highly modular, decoupled frontend f
 ---
 
 ## Phase 6: Future Backend Hookup (Post-Launch Roadmap Preview)
+
 **Goal:** Seamlessly upgrade the tool to support user management and remote cloud file versioning without refactoring the frontend core.
 
 - [ ] **API Service Layer Injection**

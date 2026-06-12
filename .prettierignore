@@ -4,3 +4,4 @@ out
 build
 public
 package-lock.json
+pnpm-lock.yaml

@@ -34,7 +34,13 @@ const initial: State = {
 function reducer(state: State, action: LocalAction): State {
   switch (action.type) {
     case 'SET_TOOL':
-      return { ...state, toolType: action.toolType, anchor: null, preview: null, polylinePoints: [] };
+      return {
+        ...state,
+        toolType: action.toolType,
+        anchor: null,
+        preview: null,
+        polylinePoints: [],
+      };
     case 'UPDATE_SETTINGS':
       return { ...state, settings: { ...state.settings, ...action.patch } };
     case 'SET_ANCHOR':
@@ -42,7 +48,10 @@ function reducer(state: State, action: LocalAction): State {
     case 'SET_PREVIEW':
       return { ...state, preview: action.preview };
     case 'ADD_POLYLINE_POINT':
-      return { ...state, polylinePoints: [...state.polylinePoints, action.point] };
+      return {
+        ...state,
+        polylinePoints: [...state.polylinePoints, action.point],
+      };
     case 'CLEAR':
       return { ...state, anchor: null, preview: null, polylinePoints: [] };
     default:
@@ -75,7 +84,10 @@ export function useActiveTool(
   }
 
   function base() {
-    return { strokeColor: settings.strokeColor, strokeWidth: settings.strokeWidth };
+    return {
+      strokeColor: settings.strokeColor,
+      strokeWidth: settings.strokeWidth,
+    };
   }
 
   function commit(shape: VectorShape) {
@@ -85,7 +97,10 @@ export function useActiveTool(
   }
 
   function finishPolyline(points: Point[]) {
-    if (points.length < 2) { local({ type: 'CLEAR' }); return; }
+    if (points.length < 2) {
+      local({ type: 'CLEAR' });
+      return;
+    }
     commit({ ...base(), id: crypto.randomUUID(), type: 'polyline', points });
   }
 
@@ -95,7 +110,8 @@ export function useActiveTool(
 
     // Double-click detection for polyline finish
     const now = Date.now();
-    const isDouble = toolType === 'polyline' && (now - lastDownTimeRef.current) < 300;
+    const isDouble =
+      toolType === 'polyline' && now - lastDownTimeRef.current < 300;
     lastDownTimeRef.current = now;
 
     if (isDouble) {
@@ -111,12 +127,23 @@ export function useActiveTool(
         break;
       case 'freehand':
         local({ type: 'SET_ANCHOR', anchor: pos });
-        local({ type: 'SET_PREVIEW', preview: { ...base(), id: 'preview', type: 'freehand', points: [pos] } });
+        local({
+          type: 'SET_PREVIEW',
+          preview: {
+            ...base(),
+            id: 'preview',
+            type: 'freehand',
+            points: [pos],
+          },
+        });
         break;
       case 'polyline': {
         const next = [...polylinePoints, pos];
         local({ type: 'ADD_POLYLINE_POINT', point: pos });
-        local({ type: 'SET_PREVIEW', preview: { ...base(), id: 'preview', type: 'polyline', points: next } });
+        local({
+          type: 'SET_PREVIEW',
+          preview: { ...base(), id: 'preview', type: 'polyline', points: next },
+        });
         break;
       }
     }
@@ -129,21 +156,53 @@ export function useActiveTool(
     switch (toolType) {
       case 'line':
         if (!anchor) return;
-        local({ type: 'SET_PREVIEW', preview: { ...base(), id: 'preview', type: 'line', points: [anchor, pos] } });
+        local({
+          type: 'SET_PREVIEW',
+          preview: {
+            ...base(),
+            id: 'preview',
+            type: 'line',
+            points: [anchor, pos],
+          },
+        });
         break;
       case 'circle':
         if (!anchor) return;
-        local({ type: 'SET_PREVIEW', preview: { ...base(), id: 'preview', type: 'circle', center: anchor, radius: Math.max(0.01, dist(anchor, pos)), fillColor: settings.fillColor } });
+        local({
+          type: 'SET_PREVIEW',
+          preview: {
+            ...base(),
+            id: 'preview',
+            type: 'circle',
+            center: anchor,
+            radius: Math.max(0.01, dist(anchor, pos)),
+            fillColor: settings.fillColor,
+          },
+        });
         break;
       case 'rect': {
         if (!anchor) return;
         const { origin, width, height } = rectFromCorners(anchor, pos);
-        local({ type: 'SET_PREVIEW', preview: { ...base(), id: 'preview', type: 'rect', origin, width: Math.max(0.01, width), height: Math.max(0.01, height), fillColor: settings.fillColor } });
+        local({
+          type: 'SET_PREVIEW',
+          preview: {
+            ...base(),
+            id: 'preview',
+            type: 'rect',
+            origin,
+            width: Math.max(0.01, width),
+            height: Math.max(0.01, height),
+            fillColor: settings.fillColor,
+          },
+        });
         break;
       }
       case 'freehand':
         if (!preview || preview.type !== 'freehand') return;
-        local({ type: 'SET_PREVIEW', preview: { ...preview, points: [...preview.points, pos] } });
+        local({
+          type: 'SET_PREVIEW',
+          preview: { ...preview, points: [...preview.points, pos] },
+        });
         break;
     }
   }
@@ -154,26 +213,67 @@ export function useActiveTool(
 
     switch (toolType) {
       case 'line':
-        if (!anchor || dist(anchor, pos) < 0.01) { local({ type: 'CLEAR' }); return; }
-        commit({ ...base(), id: crypto.randomUUID(), type: 'line', points: [anchor, pos] });
+        if (!anchor || dist(anchor, pos) < 0.01) {
+          local({ type: 'CLEAR' });
+          return;
+        }
+        commit({
+          ...base(),
+          id: crypto.randomUUID(),
+          type: 'line',
+          points: [anchor, pos],
+        });
         break;
       case 'circle': {
         if (!anchor) return;
         const r = dist(anchor, pos);
-        if (r < 0.01) { local({ type: 'CLEAR' }); return; }
-        commit({ ...base(), id: crypto.randomUUID(), type: 'circle', center: anchor, radius: r, fillColor: settings.fillColor });
+        if (r < 0.01) {
+          local({ type: 'CLEAR' });
+          return;
+        }
+        commit({
+          ...base(),
+          id: crypto.randomUUID(),
+          type: 'circle',
+          center: anchor,
+          radius: r,
+          fillColor: settings.fillColor,
+        });
         break;
       }
       case 'rect': {
         if (!anchor) return;
         const { origin, width, height } = rectFromCorners(anchor, pos);
-        if (width < 0.01 || height < 0.01) { local({ type: 'CLEAR' }); return; }
-        commit({ ...base(), id: crypto.randomUUID(), type: 'rect', origin, width, height, fillColor: settings.fillColor });
+        if (width < 0.01 || height < 0.01) {
+          local({ type: 'CLEAR' });
+          return;
+        }
+        commit({
+          ...base(),
+          id: crypto.randomUUID(),
+          type: 'rect',
+          origin,
+          width,
+          height,
+          fillColor: settings.fillColor,
+        });
         break;
       }
       case 'freehand':
-        if (!preview || preview.type !== 'freehand' || preview.points.length < 2) { local({ type: 'CLEAR' }); return; }
-        commit({ ...base(), id: crypto.randomUUID(), type: 'freehand', points: preview.points });
+        if (
+          !preview ||
+          preview.type !== 'freehand' ||
+          preview.points.length < 2
+        ) {
+          local({ type: 'CLEAR' });
+          return;
+        }
+        commit({
+          ...base(),
+          id: crypto.randomUUID(),
+          type: 'freehand',
+          points: preview.points,
+        });
         break;
       // Polyline is committed via double-click, not pointer-up
     }
@@ -184,7 +284,8 @@ export function useActiveTool(
     settings,
     preview,
     setTool: (t: ToolType) => local({ type: 'SET_TOOL', toolType: t }),
-    updateSettings: (patch: Partial<ToolSettings>) => local({ type: 'UPDATE_SETTINGS', patch }),
+    updateSettings: (patch: Partial<ToolSettings>) =>
+      local({ type: 'UPDATE_SETTINGS', patch }),
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,

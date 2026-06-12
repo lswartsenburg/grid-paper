@@ -12,13 +12,28 @@ interface Props {
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
-    <svg viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.3" fill="none" className="w-3.5 h-3.5">
+    <svg
+      viewBox="0 0 16 16"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      fill="none"
+      className="w-3.5 h-3.5"
+    >
       <path d="M1 8 C3 4, 13 4, 15 8 C13 12, 3 12, 1 8Z" />
       <circle cx="8" cy="8" r="2" fill="currentColor" />
     </svg>
   ) : (
-    <svg viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.3" fill="none" className="w-3.5 h-3.5">
-      <path d="M1 8 C3 4, 13 4, 15 8 C13 12, 3 12, 1 8Z" strokeDasharray="2 1.5" />
+    <svg
+      viewBox="0 0 16 16"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      fill="none"
+      className="w-3.5 h-3.5"
+    >
+      <path
+        d="M1 8 C3 4, 13 4, 15 8 C13 12, 3 12, 1 8Z"
+        strokeDasharray="2 1.5"
+      />
       <line x1="3" y1="13" x2="13" y2="3" />
     </svg>
   );
@@ -26,19 +41,36 @@ function EyeIcon({ open }: { open: boolean }) {
 
 function LockIcon({ locked }: { locked: boolean }) {
   return locked ? (
-    <svg viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.3" fill="none" className="w-3.5 h-3.5">
+    <svg
+      viewBox="0 0 16 16"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      fill="none"
+      className="w-3.5 h-3.5"
+    >
       <rect x="3" y="7" width="10" height="7" rx="1" />
       <path d="M5 7 V5 A3 3 0 0 1 11 5 V7" />
     </svg>
   ) : (
-    <svg viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.3" fill="none" className="w-3.5 h-3.5">
+    <svg
+      viewBox="0 0 16 16"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      fill="none"
+      className="w-3.5 h-3.5"
+    >
       <rect x="3" y="7" width="10" height="7" rx="1" />
       <path d="M5 7 V5 A3 3 0 0 1 11 5" />
     </svg>
   );
 }
 
-export default function LayerManager({ layers, activeLayerId, onSetActive, dispatch }: Props) {
+export default function LayerManager({
+  layers,
+  activeLayerId,
+  onSetActive,
+  dispatch,
+}: Props) {
   function addLayer() {
     dispatch({
       type: 'ADD_LAYER',
@@ -109,14 +141,20 @@ export default function LayerManager({ layers, activeLayerId, onSetActive, dispa
               </div>
 
               {/* Name */}
-              <span className="flex-1 text-xs text-zinc-700 truncate">{layer.name}</span>
+              <span className="flex-1 text-xs text-zinc-700 truncate">
+                {layer.name}
+              </span>
 
               {/* Visibility */}
               <button
                 title={layer.visible ? 'Hide layer' : 'Show layer'}
                 onClick={(e) => {
                   e.stopPropagation();
-                  dispatch({ type: 'UPDATE_LAYER', layerId: layer.id, patch: { visible: !layer.visible } });
+                  dispatch({
+                    type: 'UPDATE_LAYER',
+                    layerId: layer.id,
+                    patch: { visible: !layer.visible },
+                  });
                 }}
                 className={`shrink-0 ${layer.visible ? 'text-zinc-400 hover:text-zinc-700' : 'text-zinc-200 hover:text-zinc-500'}`}
               >
@@ -128,7 +166,11 @@ export default function LayerManager({ layers, activeLayerId, onSetActive, dispa
                 title={layer.locked ? 'Unlock layer' : 'Lock layer'}
                 onClick={(e) => {
                   e.stopPropagation();
-                  dispatch({ type: 'UPDATE_LAYER', layerId: layer.id, patch: { locked: !layer.locked } });
+                  dispatch({
+                    type: 'UPDATE_LAYER',
+                    layerId: layer.id,
+                    patch: { locked: !layer.locked },
+                  });
                 }}
                 className={`shrink-0 ${layer.locked ? 'text-zinc-700 hover:text-zinc-900' : 'text-zinc-200 hover:text-zinc-500'}`}
               >

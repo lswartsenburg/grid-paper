@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: TypeScript check
+        run: pnpm exec tsc -p tsconfig.json --noEmit
+
+      - name: Prettier check
+        run: pnpm exec prettier --check .
+
+      - name: Commit message format check
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          if [ "$GITHUB_EVENT_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            pnpm exec commitlint --from="$GITHUB_EVENT_BEFORE" --to="$GITHUB_SHA"
+          else
+            pnpm exec commitlint --from="HEAD~1" --to="$GITHUB_SHA"
+          fi
+
+      - name: Run tests
+        run: pnpm test

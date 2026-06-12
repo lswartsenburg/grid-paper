@@ -1,4 +1,9 @@
-import type { DrawingDocument, LayerItem, VectorShape, Point } from '../../types/canvas';
+import type {
+  DrawingDocument,
+  LayerItem,
+  VectorShape,
+  Point,
+} from '../../types/canvas';
 import { BASE_UNIT } from './coordinates';
 
 /** Screen-pixel radius within which a click counts as a hit. */
@@ -10,7 +15,10 @@ function distToSegment(p: Point, a: Point, b: Point): number {
   const dy = b.y - a.y;
   const lenSq = dx * dx + dy * dy;
   if (lenSq === 0) return Math.hypot(p.x - a.x, p.y - a.y);
-  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq));
+  const t = Math.max(
+    0,
+    Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq)
+  );
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }
 
@@ -23,13 +31,17 @@ function hitShape(shape: VectorShape, pos: Point, threshold: number): boolean {
     case 'polyline':
     case 'freehand':
       for (let i = 0; i < shape.points.length - 1; i++) {
-        if (distToSegment(pos, shape.points[i], shape.points[i + 1]) <= threshold) return true;
+        if (
+          distToSegment(pos, shape.points[i], shape.points[i + 1]) <= threshold
+        )
+          return true;
       }
       return false;
 
     case 'circle': {
       const dist = Math.hypot(pos.x - shape.center.x, pos.y - shape.center.y);
-      if (shape.fillColor !== 'transparent' && dist <= shape.radius + threshold) return true;
+      if (shape.fillColor !== 'transparent' && dist <= shape.radius + threshold)
+        return true;
       return Math.abs(dist - shape.radius) <= threshold;
     }
 
@@ -37,9 +49,12 @@ function hitShape(shape: VectorShape, pos: Point, threshold: number): boolean {
       const { origin: o, width: w, height: h, fillColor } = shape;
       if (
         fillColor !== 'transparent' &&
-        pos.x >= o.x && pos.x <= o.x + w &&
-        pos.y >= o.y && pos.y <= o.y + h
-      ) return true;
+        pos.x >= o.x &&
+        pos.x <= o.x + w &&
+        pos.y >= o.y &&
+        pos.y <= o.y + h
+      )
+        return true;
       const bl = { x: o.x, y: o.y + h };
       const tr = { x: o.x + w, y: o.y };
       const br = { x: o.x + w, y: o.y + h };
@@ -54,7 +69,11 @@ function hitShape(shape: VectorShape, pos: Point, threshold: number): boolean {
 }
 
 /** Tests items in reverse paint order so the topmost shape wins. */
-function hitItems(items: LayerItem[], pos: Point, threshold: number): string | null {
+function hitItems(
+  items: LayerItem[],
+  pos: Point,
+  threshold: number
+): string | null {
   for (let i = items.length - 1; i >= 0; i--) {
     const item = items[i];
     if (item.type === 'group') {
@@ -102,7 +121,10 @@ export function shapeBounds(
   shapes: VectorShape[]
 ): { minX: number; minY: number; maxX: number; maxY: number } | null {
   if (shapes.length === 0) return null;
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
 
   function expand(p: Point) {
     if (p.x < minX) minX = p.x;
@@ -113,16 +135,27 @@ export function shapeBounds(
 
   for (const shape of shapes) {
     switch (shape.type) {
-      case 'line': case 'polyline': case 'freehand':
+      case 'line':
+      case 'polyline':
+      case 'freehand':
         shape.points.forEach(expand);
         break;
       case 'circle':
-        expand({ x: shape.center.x - shape.radius, y: shape.center.y - shape.radius });
-        expand({ x: shape.center.x + shape.radius, y: shape.center.y + shape.radius });
+        expand({
+          x: shape.center.x - shape.radius,
+          y: shape.center.y - shape.radius,
+        });
+        expand({
+          x: shape.center.x + shape.radius,
+          y: shape.center.y + shape.radius,
+        });
         break;
       case 'rect':
         expand(shape.origin);
-        expand({ x: shape.origin.x + shape.width, y: shape.origin.y + shape.height });
+        expand({
+          x: shape.origin.x + shape.width,
+          y: shape.origin.y + shape.height,
+        });
         break;
     }
   }

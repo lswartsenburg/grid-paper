@@ -19,7 +19,11 @@ const PAD = 0.25; // grid-unit padding around the selection box
  * During drag the box follows the cursor while shapes stay in place,
  * so the user sees where they will land on release.
  */
-export default function SelectionOverlay({ shapes, dragDelta, viewport }: Props) {
+export default function SelectionOverlay({
+  shapes,
+  dragDelta,
+  viewport,
+}: Props) {
   if (shapes.length === 0) return null;
   const bounds = shapeBounds(shapes);
   if (!bounds) return null;
@@ -40,7 +44,10 @@ export default function SelectionOverlay({ shapes, dragDelta, viewport }: Props)
   const dashOff = 3 / scale;
 
   const corners: [number, number][] = [
-    [bx, by], [bx + bw, by], [bx + bw, by + bh], [bx, by + bh],
+    [bx, by],
+    [bx + bw, by],
+    [bx + bw, by + bh],
+    [bx, by + bh],
   ];
 
   return (
@@ -48,7 +55,10 @@ export default function SelectionOverlay({ shapes, dragDelta, viewport }: Props)
       <g transform={`translate(${panOffset.x} ${panOffset.y}) scale(${scale})`}>
         {/* Selection rectangle */}
         <rect
-          x={bx} y={by} width={bw} height={bh}
+          x={bx}
+          y={by}
+          width={bw}
+          height={bh}
           fill="rgba(59,130,246,0.04)"
           stroke="rgb(59,130,246)"
           strokeWidth={1.5 / scale}
@@ -59,8 +69,10 @@ export default function SelectionOverlay({ shapes, dragDelta, viewport }: Props)
         {corners.map(([cx, cy], i) => (
           <rect
             key={i}
-            x={cx - 4 / scale} y={cy - 4 / scale}
-            width={8 / scale} height={8 / scale}
+            x={cx - 4 / scale}
+            y={cy - 4 / scale}
+            width={8 / scale}
+            height={8 / scale}
             fill="white"
             stroke="rgb(59,130,246)"
             strokeWidth={1.5 / scale}

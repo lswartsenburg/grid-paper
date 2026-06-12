@@ -5,8 +5,8 @@
   "description": "Embeddable graph-paper drawing canvas for React apps",
   "exports": {
     ".": {
-      "default": "./index.ts",
-      "types": "./index.ts"
+      "types": "./index.ts",
+      "default": "./index.ts"
     }
   },
   "peerDependencies": {
