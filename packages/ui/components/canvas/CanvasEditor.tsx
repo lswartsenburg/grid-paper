@@ -187,7 +187,10 @@ interface CanvasEditorProps {
   adapter: StorageAdapter;
 }
 
-export default function CanvasEditor({ initialDoc, adapter }: CanvasEditorProps) {
+export default function CanvasEditor({
+  initialDoc,
+  adapter,
+}: CanvasEditorProps) {
   const { doc, dispatch, undo, redo, canUndo, canRedo } =
     useCanvasHistory(initialDoc);
   const [activePanel, setActivePanel] = useState<string | null>(null);

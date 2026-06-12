@@ -15,7 +15,10 @@ function shapeLabelPosition(
 ): { x: number; y: number } | null {
   switch (shape.type) {
     case 'rect':
-      return { x: shape.origin.x + shape.width / 2, y: shape.origin.y + shape.height / 2 };
+      return {
+        x: shape.origin.x + shape.width / 2,
+        y: shape.origin.y + shape.height / 2,
+      };
     case 'circle':
       return { x: shape.center.x, y: shape.center.y };
     case 'line': {

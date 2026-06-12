@@ -27,5 +27,13 @@ export { useDrawingState, createDocument } from './lib/drawing/useDrawingState';
 export type { DrawingAction } from './lib/drawing/useDrawingState';
 
 // Storage — adapter interface + default IndexedDB implementation
-export type { StorageAdapter, DocumentSummary } from './lib/storage/StorageAdapter';
-export { IndexedDBAdapter, getDefaultAdapter, loadInitialDocument, useStorageAdapter } from './lib/storage/useStorageAdapter';
+export type {
+  StorageAdapter,
+  DocumentSummary,
+} from './lib/storage/StorageAdapter';
+export {
+  IndexedDBAdapter,
+  getDefaultAdapter,
+  loadInitialDocument,
+  useStorageAdapter,
+} from './lib/storage/useStorageAdapter';

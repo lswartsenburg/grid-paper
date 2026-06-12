@@ -232,11 +232,14 @@ export default function BottomBar({
                     value={gridConfig.cellSize}
                     onChange={(e) => {
                       const v = parseFloat(e.target.value);
-                      if (!isNaN(v) && v > 0) onGridConfigChange({ cellSize: v });
+                      if (!isNaN(v) && v > 0)
+                        onGridConfigChange({ cellSize: v });
                     }}
                     className="w-20 text-xs border border-zinc-200 rounded px-2 py-1.5 text-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
                   />
-                  <span className="text-xs text-zinc-400">{gridConfig.unit}</span>
+                  <span className="text-xs text-zinc-400">
+                    {gridConfig.unit}
+                  </span>
                 </div>
               </label>
             )}
@@ -253,7 +256,8 @@ export default function BottomBar({
                   value={gridConfig.majorEvery}
                   onChange={(e) => {
                     const v = parseInt(e.target.value, 10);
-                    if (!isNaN(v) && v >= 1) onGridConfigChange({ majorEvery: v });
+                    if (!isNaN(v) && v >= 1)
+                      onGridConfigChange({ majorEvery: v });
                   }}
                   className="w-20 text-xs border border-zinc-200 rounded px-2 py-1.5 text-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
                 />

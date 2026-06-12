@@ -264,7 +264,9 @@ test.describe.serial('grid settings', () => {
     await expect(page.getByText('1 cell = 1 in')).toBeVisible();
   });
 
-  test('unit and cell size together persist across reload', async ({ page }) => {
+  test('unit and cell size together persist across reload', async ({
+    page,
+  }) => {
     await openGridSettings(page);
     await page.getByRole('combobox').selectOption('ft');
 
