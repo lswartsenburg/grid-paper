@@ -11,6 +11,12 @@ interface Options {
   onPointerDown?: (gridPos: Point, event: PointerEvent) => void;
   onPointerMove?: (gridPos: Point, delta: Point, event: PointerEvent) => void;
   onPointerUp?: (gridPos: Point, event: PointerEvent) => void;
+  /** When true, left-button drag pans instead of forwarding to onPointerDown (hand tool). */
+  isPanMode?: boolean;
+  /** Called when a pan gesture starts (middle-click, space+drag, or hand tool drag). */
+  onPanStart?: () => void;
+  /** Called when a pan gesture ends. */
+  onPanEnd?: () => void;
 }
 
 function normalizeWheelDelta(e: WheelEvent): number {
@@ -73,10 +79,11 @@ export function useCanvasPointer<T extends HTMLElement>(options: Options) {
         return;
       }
 
-      // Middle-click or space+left = pan
-      if (e.button === 1 || (e.button === 0 && isSpaceDownRef.current)) {
+      // Middle-click, space+left, or hand tool = pan
+      if (e.button === 1 || (e.button === 0 && (isSpaceDownRef.current || optionsRef.current.isPanMode))) {
         isPanningRef.current = true;
         lastScreenRef.current = screen;
+        optionsRef.current.onPanStart?.();
         e.preventDefault();
         return;
       }
@@ -151,11 +158,9 @@ export function useCanvasPointer<T extends HTMLElement>(options: Options) {
       lastPinchDistRef.current = null;
       lastPinchMidRef.current = null;
 
-      if (
-        isPanningRef.current &&
-        (e.button === 1 || (e.button === 0 && isSpaceDownRef.current))
-      ) {
+      if (isPanningRef.current && (e.button === 1 || e.button === 0)) {
         isPanningRef.current = false;
+        optionsRef.current.onPanEnd?.();
         return;
       }
 
@@ -185,7 +190,10 @@ export function useCanvasPointer<T extends HTMLElement>(options: Options) {
     function handleKeyUp(e: KeyboardEvent) {
       if (e.code === 'Space') {
         isSpaceDownRef.current = false;
-        isPanningRef.current = false;
+        if (isPanningRef.current) {
+          isPanningRef.current = false;
+          optionsRef.current.onPanEnd?.();
+        }
       }
     }
 

@@ -38,6 +38,8 @@ function shapeLines(shape: VectorShape, level: number): string[] {
       ? `${i}strokeWidth: ${round(shape.strokeWidth)}`
       : null;
 
+  if (shape.key !== undefined) lines.push(`${i}key: "${shape.key}"`);
+
   switch (shape.type) {
     case 'line':
       lines.push(`${i}type: line`);
@@ -85,7 +87,13 @@ function itemLines(item: LayerItem, level: number): string[] {
 
   if (item.type === 'group') {
     const lines: string[] = [];
-    lines.push(`${bullet}type: group`);
+    // key (if present) is the bullet field; type always follows on the next line.
+    if (item.key !== undefined) {
+      lines.push(`${bullet}key: "${item.key}"`);
+      lines.push(`${i}type: group`);
+    } else {
+      lines.push(`${bullet}type: group`);
+    }
     if (item.name) lines.push(`${i}name: "${item.name}"`);
     if (item.children.length > 0) {
       lines.push(`${i}shapes:`);

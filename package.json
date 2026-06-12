@@ -10,7 +10,13 @@
     "test": "pnpm --filter @grid-paper/ui test",
     "test:e2e": "playwright test",
     "prepare": "husky",
-    "commit": "cz"
+    "commit": "cz",
+    "postinstall": "git config --local core.editor cat"
+  },
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
   },
   "devDependencies": {
     "@commitlint/cli": "^21.0.2",

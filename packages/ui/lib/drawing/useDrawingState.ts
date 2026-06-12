@@ -58,6 +58,13 @@ export type DrawingAction =
       patch: Partial<Pick<VectorShape, 'strokeColor' | 'strokeWidth'>> & {
         fillColor?: string;
       };
+    }
+  | {
+      type: 'UPDATE_SHAPE_KEY';
+      layerId: string;
+      shapeId: string;
+      /** Pass undefined to remove the key entirely. */
+      key: string | undefined;
     };
 
 // --- Recursive item helpers ---
@@ -334,6 +341,21 @@ function reducer(
         }))
       );
 
+    case 'UPDATE_SHAPE_KEY':
+      return stamp(
+        mapLayer(state, action.layerId, (l) => ({
+          ...l,
+          items: mapItemsDeep(l.items, (item) => {
+            if (item.id !== action.shapeId) return item;
+            if (action.key === undefined) {
+              const { key: _removed, ...rest } = item as typeof item & { key?: string };
+              return rest as LayerItem;
+            }
+            return { ...item, key: action.key };
+          }),
+        }))
+      );
+
     default:
       return state;
   }
@@ -368,4 +390,28 @@ export function createDocument(
 
 export function useDrawingState(initialDocument: DrawingDocument) {
   return useReducer(reducer, initialDocument);
+}
+
+/**
+ * Returns the set of all `key` values used across every shape/group in the
+ * document. Pass `excludeId` to omit the currently-selected shape so it
+ * doesn't block re-confirming its own key.
+ */
+export function collectKeys(
+  doc: DrawingDocument,
+  excludeId?: string
+): Set<string> {
+  const keys = new Set<string>();
+
+  function walk(items: LayerItem[]): void {
+    for (const item of items) {
+      if (item.id !== excludeId && item.key !== undefined) {
+        keys.add(item.key);
+      }
+      if (item.type === 'group') walk(item.children);
+    }
+  }
+
+  for (const layer of doc.layers) walk(layer.items);
+  return keys;
 }

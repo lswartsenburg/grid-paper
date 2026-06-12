@@ -13,6 +13,9 @@
 export type YamlPoint = [number, number];
 
 export interface YamlBaseShape {
+  /** Human-readable identifier. Preserved as the shape's `key` in the data
+   *  model and rendered as `data-key` in the DOM. */
+  key?: string;
   stroke?: string;
   strokeWidth?: number;
 }
@@ -50,6 +53,7 @@ export interface YamlFreehandShape extends YamlBaseShape {
 
 export interface YamlGroup {
   type: 'group';
+  key?: string;
   name?: string;
   shapes: YamlItem[];
 }

@@ -29,6 +29,7 @@ function parseItem(raw: YamlItem): LayerItem {
   if (raw.type === 'group') {
     const group: GroupShape = {
       id: crypto.randomUUID(),
+      ...(raw.key !== undefined && { key: raw.key }),
       type: 'group',
       name: raw.name ?? 'Group',
       children: (raw.shapes ?? []).map(parseItem),
@@ -38,6 +39,7 @@ function parseItem(raw: YamlItem): LayerItem {
 
   const base = {
     id: crypto.randomUUID(),
+    ...(raw.key !== undefined && { key: raw.key }),
     strokeColor: raw.stroke ?? DEFAULT_STROKE,
     strokeWidth: raw.strokeWidth ?? DEFAULT_STROKE_WIDTH,
   };

@@ -12,6 +12,13 @@ interface Props {
   onPointerDown?: (gridPos: Point, event: PointerEvent) => void;
   onPointerMove?: (gridPos: Point, delta: Point, event: PointerEvent) => void;
   onPointerUp?: (gridPos: Point, event: PointerEvent) => void;
+  onContextMenu?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  /** When true, left-button drag pans the canvas (hand tool mode). */
+  isPanMode?: boolean;
+  /** Called when a pan gesture starts. */
+  onPanStart?: () => void;
+  /** Called when a pan gesture ends. */
+  onPanEnd?: () => void;
   /** CSS cursor value. Defaults to 'crosshair'. */
   cursorStyle?: string;
   children?: React.ReactNode;
@@ -24,6 +31,10 @@ export default function GridCanvas({
   onPointerDown,
   onPointerMove,
   onPointerUp,
+  onContextMenu,
+  isPanMode,
+  onPanStart,
+  onPanEnd,
   cursorStyle = 'crosshair',
   children,
 }: Props) {
@@ -51,6 +62,9 @@ export default function GridCanvas({
     onPointerDown,
     onPointerMove,
     onPointerUp,
+    isPanMode,
+    onPanStart,
+    onPanEnd,
   });
 
   return (
@@ -60,6 +74,7 @@ export default function GridCanvas({
       // so panning/pinch-zoom aren't intercepted by the browser scroller.
       className="relative flex-1 overflow-hidden select-none touch-none"
       style={{ cursor: cursorStyle }}
+      onContextMenu={(e) => { e.preventDefault(); onContextMenu?.(e); }}
     >
       <GridBackground viewport={viewport} majorEvery={majorEvery} />
       {children}

@@ -5,6 +5,9 @@ export interface Point {
 
 interface BaseShape {
   id: string;
+  /** Optional human-readable identifier. Serialized as `key:` in YAML and
+   *  rendered as `data-key` in the DOM for easy test selection. */
+  key?: string;
   strokeColor: string;
   strokeWidth: number;
 }
@@ -50,6 +53,8 @@ export type ShapeType = VectorShape['type'];
 
 export interface GroupShape {
   id: string;
+  /** Optional human-readable identifier — same semantics as on VectorShape. */
+  key?: string;
   type: 'group';
   name: string;
   children: LayerItem[];

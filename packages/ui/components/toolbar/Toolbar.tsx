@@ -19,6 +19,15 @@ const TOOLS: Tool[] = [
     ),
   },
   {
+    type: 'hand',
+    label: 'Hand — pan canvas (H)',
+    icon: (
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 8V4.5a1 1 0 0 1 2 0V8m0-3.5V3a1 1 0 0 1 2 0v5m0-3a1 1 0 0 1 2 0v3.5A4.5 4.5 0 0 1 7.5 13a3 3 0 0 1-3-3V7a1 1 0 0 1 2 0v1" />
+      </svg>
+    ),
+  },
+  {
     type: 'line',
     label: 'Line',
     icon: (

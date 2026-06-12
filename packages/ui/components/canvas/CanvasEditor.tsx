@@ -8,7 +8,7 @@ import {
   useRef,
   useLayoutEffect,
 } from 'react';
-import { createDocument } from '../../lib/drawing/useDrawingState';
+import { createDocument, collectKeys } from '../../lib/drawing/useDrawingState';
 import { useCanvasHistory } from '../../lib/drawing/useCanvasHistory';
 import {
   loadFromStorage,
@@ -16,7 +16,7 @@ import {
 } from '../../lib/storage/useStorageAdapter';
 import { useActiveTool } from '../../lib/tools/useActiveTool';
 import { hitTestDocument, shapeBounds } from '../../lib/canvas/hitTest';
-import { BASE_UNIT } from '../../lib/canvas/coordinates';
+import { BASE_UNIT, snapToGrid, zoomAround } from '../../lib/canvas/coordinates';
 import GridCanvas from './GridCanvas';
 import ShapeRenderer from './ShapeRenderer';
 import PreviewLayer from './PreviewLayer';
@@ -25,11 +25,15 @@ import Toolbar from '../toolbar/Toolbar';
 import LayerManager from '../layers/LayerManager';
 import YamlEditor from '../editor/YamlEditor';
 import PropertiesPanel from '../properties/PropertiesPanel';
+import ContextMenu from './ContextMenu';
+import BottomBar from './BottomBar';
 import RightSidebar from '../sidebar/RightSidebar';
 import type { SidebarPanel } from '../sidebar/RightSidebar';
 import type {
+  CircleShape,
   DrawingDocument,
   LayerItem,
+  LineShape,
   Point,
   RectShape,
   VectorShape,
@@ -124,10 +128,64 @@ function computeResizedRect(
   }
 }
 
+const MIN_CIRCLE_RADIUS = 0.5;
+
+/**
+ * Returns which of a line's two endpoints is closest to the given corner of
+ * its bounding box. Used to decide which endpoint a corner drag moves.
+ */
+function lineEndpointForCorner(
+  line: LineShape,
+  corner: ResizeCorner,
+  bounds: { minX: number; minY: number; maxX: number; maxY: number }
+): 0 | 1 {
+  const cp = {
+    tl: { x: bounds.minX - CORNER_PAD, y: bounds.minY - CORNER_PAD },
+    tr: { x: bounds.maxX + CORNER_PAD, y: bounds.minY - CORNER_PAD },
+    br: { x: bounds.maxX + CORNER_PAD, y: bounds.maxY + CORNER_PAD },
+    bl: { x: bounds.minX - CORNER_PAD, y: bounds.maxY + CORNER_PAD },
+  }[corner];
+  const d0 = Math.hypot(line.points[0].x - cp.x, line.points[0].y - cp.y);
+  const d1 = Math.hypot(line.points[1].x - cp.x, line.points[1].y - cp.y);
+  return d0 <= d1 ? 0 : 1;
+}
+
+/**
+ * Moves one endpoint of a line to `pos`, leaving the other fixed.
+ */
+function computeResizedLine(
+  original: LineShape,
+  endpointIdx: 0 | 1,
+  pos: Point
+): LineShape {
+  const newPoints: [Point, Point] = [original.points[0], original.points[1]];
+  newPoints[endpointIdx] = pos;
+  return { ...original, points: newPoints };
+}
+
+/**
+ * Resizes a circle so its bounding-box corner tracks the pointer.
+ * The center stays fixed; the new radius = max(|Δx|, |Δy|) from center.
+ */
+function computeResizedCircle(
+  original: CircleShape,
+  pos: Point
+): CircleShape {
+  const newRadius = Math.max(
+    MIN_CIRCLE_RADIUS,
+    Math.max(
+      Math.abs(pos.x - original.center.x),
+      Math.abs(pos.y - original.center.y)
+    )
+  );
+  return { ...original, radius: newRadius };
+}
+
 export default function CanvasEditor() {
   const initialDoc = useMemo(() => loadFromStorage() ?? createDocument(), []);
-  const { doc, dispatch, undo, redo } = useCanvasHistory(initialDoc);
+  const { doc, dispatch, undo, redo, canUndo, canRedo } = useCanvasHistory(initialDoc);
   const [activePanel, setActivePanel] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   function togglePanel(id: string) {
     setActivePanel((prev) => (prev === id ? null : id));
@@ -171,14 +229,17 @@ export default function CanvasEditor() {
 
   // Resize state — refs for synchronous handler logic, state for rendering.
   const resizeCornerRef = useRef<ResizeCorner | null>(null);
-  const resizeOriginalRef = useRef<RectShape | null>(null);
-  const resizePreviewRef = useRef<RectShape | null>(null);
-  const [resizePreview, setResizePreview] = useState<RectShape | null>(null);
+  const resizeOriginalRef = useRef<VectorShape | null>(null);
+  const resizePreviewRef = useRef<VectorShape | null>(null);
+  const [resizePreview, setResizePreview] = useState<VectorShape | null>(null);
+  // For line resize: which endpoint (0 or 1) the active corner drag moves.
+  const resizeLineEndpointRef = useRef<0 | 1 | null>(null);
 
   useLayoutEffect(() => {
     docRef.current = doc;
     selectionLayerIdRef.current = selectionLayerId;
     selectedShapeIdsRef.current = selectedShapeIds;
+    snapSettingsRef.current = tool.settings;
   });
 
   const clearSelection = useCallback(() => {
@@ -190,6 +251,7 @@ export default function CanvasEditor() {
     resizeCornerRef.current = null;
     resizeOriginalRef.current = null;
     resizePreviewRef.current = null;
+    resizeLineEndpointRef.current = null;
     setSelectionLayerId(null);
     setSelectedShapeIds([]);
     setDragDelta({ x: 0, y: 0 });
@@ -200,23 +262,92 @@ export default function CanvasEditor() {
   const tool = useActiveTool(dispatch, activeLayerId);
   useStorageAdapter(doc);
 
+  // Keeps the latest snap settings available inside stable pointer callbacks.
+  const snapSettingsRef = useRef(tool.settings);
+
+  // --- Context menu state ---
+  const [contextMenuPos, setContextMenuPos] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+
+  /**
+   * Reorders the selected shape within its layer.
+   * Uses refs so the callback stays stable regardless of doc/selection changes.
+   */
+  const dispatchZOrder = useCallback(
+    (mode: 'backward' | 'forward' | 'back' | 'front') => {
+      const layerId = selectionLayerIdRef.current;
+      const shapeIds = selectedShapeIdsRef.current;
+      if (!layerId || shapeIds.length !== 1) return;
+      const shapeId = shapeIds[0];
+
+      const layer = docRef.current.layers.find((l) => l.id === layerId);
+      if (!layer) return;
+
+      const ids = layer.items.map((i) => i.id);
+      const idx = ids.indexOf(shapeId);
+      if (idx === -1) return;
+
+      let newIds: string[];
+      switch (mode) {
+        case 'backward':
+          if (idx === 0) return;
+          newIds = [...ids];
+          [newIds[idx - 1], newIds[idx]] = [newIds[idx], newIds[idx - 1]];
+          break;
+        case 'forward':
+          if (idx === ids.length - 1) return;
+          newIds = [...ids];
+          [newIds[idx], newIds[idx + 1]] = [newIds[idx + 1], newIds[idx]];
+          break;
+        case 'back':
+          newIds = [shapeId, ...ids.filter((id) => id !== shapeId)];
+          break;
+        case 'front':
+          newIds = [...ids.filter((id) => id !== shapeId), shapeId];
+          break;
+        default:
+          return;
+      }
+
+      dispatch({ type: 'REORDER_ITEMS', layerId, orderedIds: newIds });
+      setContextMenuPos(null);
+    },
+    [dispatch]
+  );
+
   // --- Selection pointer handlers (stable; read latest values via refs) ---
   const handleSelectPointerDown = useCallback(
     (pos: Point) => {
       const d = docRef.current;
 
-      // Check corners first if exactly one rect is selected — enter resize mode.
+      // Check corners first if exactly one resizable shape is selected.
       const currentShapes = selectedShapesRef.current;
-      if (currentShapes.length === 1 && currentShapes[0].type === 'rect') {
-        const bounds = shapeBounds(currentShapes);
-        if (bounds) {
-          const corner = hitTestCorners(bounds, pos, d.viewport.zoom);
-          if (corner) {
-            resizeCornerRef.current = corner;
-            resizeOriginalRef.current = currentShapes[0] as RectShape;
-            dragOriginRef.current = pos;
-            updateCursor(CORNER_CURSORS[corner]);
-            return; // keep existing selection, begin resize
+      if (currentShapes.length === 1) {
+        const shape = currentShapes[0];
+        if (
+          shape.type === 'rect' ||
+          shape.type === 'line' ||
+          shape.type === 'circle'
+        ) {
+          const bounds = shapeBounds(currentShapes);
+          if (bounds) {
+            const corner = hitTestCorners(bounds, pos, d.viewport.zoom);
+            if (corner) {
+              resizeCornerRef.current = corner;
+              resizeOriginalRef.current = shape;
+              dragOriginRef.current = pos;
+              if (shape.type === 'line') {
+                resizeLineEndpointRef.current = lineEndpointForCorner(
+                  shape,
+                  corner,
+                  bounds
+                );
+              }
+              updateCursor(CORNER_CURSORS[corner]);
+              return; // keep existing selection, begin resize
+            }
           }
         }
       }
@@ -229,11 +360,9 @@ export default function CanvasEditor() {
         dragAccumRef.current = { x: 0, y: 0 };
         setSelectionLayerId(hit.layerId);
         setSelectedShapeIds([hit.shapeId]);
-        setActivePanel('properties');
         updateCursor('grabbing');
       } else {
         clearSelection();
-        setActivePanel((prev) => (prev === 'properties' ? null : prev));
       }
     },
     [clearSelection]
@@ -245,12 +374,26 @@ export default function CanvasEditor() {
       resizeCornerRef.current !== null &&
       resizeOriginalRef.current !== null
     ) {
-      const patch = computeResizedRect(
-        resizeOriginalRef.current,
-        resizeCornerRef.current,
-        pos
-      );
-      const preview: RectShape = { ...resizeOriginalRef.current, ...patch };
+      const { snapEnabled, snapStep } = snapSettingsRef.current;
+      const snappedPos = snapEnabled ? snapToGrid(pos, snapStep) : pos;
+      const original = resizeOriginalRef.current;
+      let preview: VectorShape;
+      if (original.type === 'rect') {
+        preview = {
+          ...original,
+          ...computeResizedRect(original, resizeCornerRef.current, snappedPos),
+        };
+      } else if (original.type === 'line') {
+        preview = computeResizedLine(
+          original,
+          resizeLineEndpointRef.current!,
+          snappedPos
+        );
+      } else if (original.type === 'circle') {
+        preview = computeResizedCircle(original, snappedPos);
+      } else {
+        return;
+      }
       resizePreviewRef.current = preview;
       setResizePreview(preview);
       return;
@@ -268,13 +411,16 @@ export default function CanvasEditor() {
     // Idle hover: update cursor to signal what a drag would do.
     const d = docRef.current;
     const shapes = selectedShapesRef.current;
-    if (shapes.length === 1 && shapes[0].type === 'rect') {
-      const bounds = shapeBounds(shapes);
-      if (bounds) {
-        const corner = hitTestCorners(bounds, pos, d.viewport.zoom);
-        if (corner) {
-          updateCursor(CORNER_CURSORS[corner]);
-          return;
+    if (shapes.length === 1) {
+      const s = shapes[0];
+      if (s.type === 'rect' || s.type === 'line' || s.type === 'circle') {
+        const bounds = shapeBounds(shapes);
+        if (bounds) {
+          const corner = hitTestCorners(bounds, pos, d.viewport.zoom);
+          if (corner) {
+            updateCursor(CORNER_CURSORS[corner]);
+            return;
+          }
         }
       }
     }
@@ -299,6 +445,7 @@ export default function CanvasEditor() {
       resizeCornerRef.current = null;
       resizeOriginalRef.current = null;
       resizePreviewRef.current = null;
+      resizeLineEndpointRef.current = null;
       dragOriginRef.current = null;
       setResizePreview(null);
       updateCursor('default');
@@ -319,6 +466,35 @@ export default function CanvasEditor() {
     updateCursor('default');
   }, [dispatch]);
 
+  // --- Right-click context menu ---
+  const handleCanvasContextMenu = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (tool.toolType !== 'select') return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const screenX = e.clientX - rect.left;
+      const screenY = e.clientY - rect.top;
+      const d = docRef.current;
+      const gridPos = {
+        x: (screenX - d.viewport.panOffset.x) / (BASE_UNIT * d.viewport.zoom),
+        y: (screenY - d.viewport.panOffset.y) / (BASE_UNIT * d.viewport.zoom),
+      };
+      const hit = hitTestDocument(d, gridPos, d.viewport.zoom);
+      if (hit) {
+        // Select the hit shape if it isn't already.
+        if (!selectedShapeIdsRef.current.includes(hit.shapeId)) {
+          selectionLayerIdRef.current = hit.layerId;
+          selectedShapeIdsRef.current = [hit.shapeId];
+          setSelectionLayerId(hit.layerId);
+          setSelectedShapeIds([hit.shapeId]);
+        }
+        setContextMenuPos({ x: screenX, y: screenY });
+      } else {
+        setContextMenuPos(null);
+      }
+    },
+    [tool.toolType]
+  );
+
   // --- Keyboard shortcuts ---
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -333,8 +509,12 @@ export default function CanvasEditor() {
         redo();
         return;
       }
+      const focusedTag = (document.activeElement as HTMLElement)?.tagName;
+      const isEditingText =
+        focusedTag === 'INPUT' || focusedTag === 'TEXTAREA' || (document.activeElement as HTMLElement)?.isContentEditable;
       if (
         (e.key === 'Delete' || e.key === 'Backspace') &&
+        !isEditingText &&
         selectionLayerId &&
         selectedShapeIds.length > 0
       ) {
@@ -345,7 +525,23 @@ export default function CanvasEditor() {
         clearSelection();
         return;
       }
-      if (e.key === 'Escape') clearSelection();
+      if (e.key === 'Escape') {
+        clearSelection();
+        setContextMenuPos(null);
+        return;
+      }
+      // Tool shortcuts (only when not typing in an input)
+      if (!isEditingText) {
+        if (e.key === 'v' || e.key === 'V') { tool.setTool('select'); return; }
+        if (e.key === 'h' || e.key === 'H') { tool.setTool('hand'); return; }
+      }
+      // Z-order shortcuts (single selected shape, select tool only)
+      if (mod && (e.key === '[' || e.key === ']') && selectionLayerId && selectedShapeIds.length === 1) {
+        e.preventDefault();
+        if (e.key === '[') dispatchZOrder(e.altKey ? 'back' : 'backward');
+        else dispatchZOrder(e.altKey ? 'front' : 'forward');
+        return;
+      }
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
@@ -356,6 +552,8 @@ export default function CanvasEditor() {
     selectedShapeIds,
     dispatch,
     clearSelection,
+    dispatchZOrder,
+    tool,
   ]);
 
   // When the YAML editor produces a fully-parsed document, replace state entirely.
@@ -394,16 +592,56 @@ export default function CanvasEditor() {
     return result;
   }, [doc, selectionLayerId, selectedShapeIds]);
 
+  // Keys already in use by every shape except the one currently selected.
+  const existingKeys = useMemo(
+    () => collectKeys(doc, selectedShapes[0]?.id),
+    [doc, selectedShapes]
+  );
+
   // --- Route pointer events based on active tool ---
   const isSelectTool = tool.toolType === 'select';
+  const isHandTool = tool.toolType === 'hand';
+
+  // Track Space key so we can show a grab cursor while panning with Space.
+  const [isSpaceDown, setIsSpaceDown] = useState(false);
+  useEffect(() => {
+    function onDown(e: KeyboardEvent) {
+      if (e.code === 'Space' && !e.repeat) {
+        const tag = (document.activeElement as HTMLElement)?.tagName;
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA') setIsSpaceDown(true);
+      }
+    }
+    function onUp(e: KeyboardEvent) {
+      if (e.code === 'Space') setIsSpaceDown(false);
+    }
+    window.addEventListener('keydown', onDown);
+    window.addEventListener('keyup', onUp);
+    return () => {
+      window.removeEventListener('keydown', onDown);
+      window.removeEventListener('keyup', onUp);
+    };
+  }, []);
+
+  // Track active pan gesture so we can switch between grab and grabbing.
+  const [isPanning, setIsPanning] = useState(false);
+  const handlePanStart = useCallback(() => setIsPanning(true), []);
+  const handlePanEnd = useCallback(() => setIsPanning(false), []);
+
+  // Compute the effective canvas cursor, overriding the drawing-tool cursor
+  // whenever the user is in a pan mode (hand tool, space held, or mid-click).
+  const isPanCursor = isHandTool || isSpaceDown;
+  const effectiveCursor = isPanCursor
+    ? isPanning ? 'grabbing' : 'grab'
+    : canvasCursor;
 
   // When switching away from the select tool, revert to crosshair.
   useEffect(() => {
-    updateCursor(isSelectTool ? 'default' : 'crosshair');
+    if (!isSelectTool && !isHandTool) updateCursor('crosshair');
+    if (isSelectTool) updateCursor('default');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSelectTool]);
+  }, [isSelectTool, isHandTool]);
   const activeLayer = doc.layers.find((l) => l.id === activeLayerId);
-  const toolReady = !isSelectTool && !!activeLayer && !activeLayer.locked;
+  const toolReady = !isSelectTool && !isHandTool && !!activeLayer && !activeLayer.locked;
 
   const pointerDown = isSelectTool
     ? handleSelectPointerDown
@@ -449,31 +687,6 @@ export default function CanvasEditor() {
       ),
     },
     {
-      id: 'properties',
-      label: 'Properties',
-      icon: (
-        <svg
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="8" cy="8" r="5" />
-          <line x1="8" y1="5" x2="8" y2="8.5" />
-          <circle cx="8" cy="11" r="0.75" fill="currentColor" stroke="none" />
-        </svg>
-      ),
-      content: (
-        <PropertiesPanel
-          shape={selectedShapes[0] ?? null}
-          layerId={selectionLayerId}
-          dispatch={dispatch}
-        />
-      ),
-    },
-    {
       id: 'yaml',
       label: 'YAML',
       icon: (
@@ -499,11 +712,14 @@ export default function CanvasEditor() {
   return (
     <div className="flex flex-1 overflow-hidden">
       {/* Canvas area — toolbar floats at top center */}
-      <div className="relative flex flex-1 overflow-hidden">
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+      <div ref={containerRef} className="relative flex flex-1 overflow-hidden">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none flex flex-col items-center gap-2">
           <div className="pointer-events-auto">
             <Toolbar activeTool={tool.toolType} onSetTool={tool.setTool} />
           </div>
+          <p className="text-xs text-zinc-400 select-none whitespace-nowrap">
+            To move canvas: hold <kbd className="font-mono bg-zinc-100 border border-zinc-300 rounded px-1">Space</kbd>, scroll wheel, or use the hand tool&nbsp;(<kbd className="font-mono bg-zinc-100 border border-zinc-300 rounded px-1">H</kbd>)
+          </p>
         </div>
 
         <GridCanvas
@@ -515,7 +731,11 @@ export default function CanvasEditor() {
           onPointerDown={pointerDown}
           onPointerMove={pointerMove}
           onPointerUp={pointerUp}
-          cursorStyle={canvasCursor}
+          onContextMenu={handleCanvasContextMenu}
+          isPanMode={isHandTool}
+          onPanStart={handlePanStart}
+          onPanEnd={handlePanEnd}
+          cursorStyle={effectiveCursor}
         >
           {/* Hide the original shape while a resize preview is active. */}
           <ShapeRenderer
@@ -539,6 +759,77 @@ export default function CanvasEditor() {
             />
           )}
         </GridCanvas>
+
+        {/* Z-order context menu — shown on right-click over a shape */}
+        {contextMenuPos && selectedShapes.length === 1 && (
+          <ContextMenu
+            x={contextMenuPos.x}
+            y={contextMenuPos.y}
+            onClose={() => setContextMenuPos(null)}
+            sections={[
+              {
+                items: [
+                  {
+                    label: 'Send backward',
+                    shortcut: '⌘[',
+                    onClick: () => dispatchZOrder('backward'),
+                  },
+                  {
+                    label: 'Bring forward',
+                    shortcut: '⌘]',
+                    onClick: () => dispatchZOrder('forward'),
+                  },
+                  {
+                    label: 'Send to back',
+                    shortcut: '⌘⌥[',
+                    onClick: () => dispatchZOrder('back'),
+                  },
+                  {
+                    label: 'Bring to front',
+                    shortcut: '⌘⌥]',
+                    onClick: () => dispatchZOrder('front'),
+                  },
+                ],
+              },
+            ]}
+          />
+        )}
+
+        {/* Floating properties panel — visible only when a shape is selected */}
+        {selectedShapes.length > 0 && (
+          <div className="absolute left-3 top-20 z-10 w-52 bg-white rounded-xl border border-zinc-200 shadow-lg overflow-hidden pointer-events-auto">
+            <PropertiesPanel
+              shape={selectedShapes[0]}
+              layerId={selectionLayerId}
+              dispatch={dispatch}
+              existingKeys={existingKeys}
+            />
+          </div>
+        )}
+
+        <BottomBar
+          zoom={doc.viewport.zoom}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={undo}
+          onRedo={redo}
+          onZoomChange={(newZoom) => {
+            const el = containerRef.current;
+            if (el) {
+              const { width, height } = el.getBoundingClientRect();
+              const center = { x: width / 2, y: height / 2 };
+              dispatch({
+                type: 'UPDATE_VIEWPORT',
+                patch: {
+                  zoom: newZoom,
+                  panOffset: zoomAround(center, doc.viewport.zoom, newZoom, doc.viewport.panOffset),
+                },
+              });
+            } else {
+              dispatch({ type: 'UPDATE_VIEWPORT', patch: { zoom: newZoom } });
+            }
+          }}
+        />
       </div>
 
       <RightSidebar

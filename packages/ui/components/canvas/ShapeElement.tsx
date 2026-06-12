@@ -12,6 +12,7 @@ export default function ShapeElement({
   dashed = false,
 }: Props) {
   const common = {
+    'data-key': shape.key,
     stroke: shape.strokeColor,
     strokeWidth: shape.strokeWidth,
     vectorEffect: 'non-scaling-stroke' as const,
