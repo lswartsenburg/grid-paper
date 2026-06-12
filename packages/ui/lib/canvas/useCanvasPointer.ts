@@ -80,7 +80,11 @@ export function useCanvasPointer<T extends HTMLElement>(options: Options) {
       }
 
       // Middle-click, space+left, or hand tool = pan
-      if (e.button === 1 || (e.button === 0 && (isSpaceDownRef.current || optionsRef.current.isPanMode))) {
+      if (
+        e.button === 1 ||
+        (e.button === 0 &&
+          (isSpaceDownRef.current || optionsRef.current.isPanMode))
+      ) {
         isPanningRef.current = true;
         lastScreenRef.current = screen;
         optionsRef.current.onPanStart?.();

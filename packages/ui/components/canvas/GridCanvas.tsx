@@ -74,7 +74,10 @@ export default function GridCanvas({
       // so panning/pinch-zoom aren't intercepted by the browser scroller.
       className="relative flex-1 overflow-hidden select-none touch-none"
       style={{ cursor: cursorStyle }}
-      onContextMenu={(e) => { e.preventDefault(); onContextMenu?.(e); }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onContextMenu?.(e);
+      }}
     >
       <GridBackground viewport={viewport} majorEvery={majorEvery} />
       {children}

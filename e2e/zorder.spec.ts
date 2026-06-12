@@ -20,7 +20,9 @@ function snapPx(canvasPx: number): number {
  */
 async function getTopRectWidth(page: Page): Promise<number> {
   return page.evaluate(() => {
-    const rects = [...document.querySelectorAll('svg rect[fill="transparent"]')];
+    const rects = [
+      ...document.querySelectorAll('svg rect[fill="transparent"]'),
+    ];
     if (rects.length < 2) return 0;
     return rects[rects.length - 1].getBoundingClientRect().width;
   });

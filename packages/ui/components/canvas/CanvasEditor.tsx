@@ -16,7 +16,11 @@ import {
 } from '../../lib/storage/useStorageAdapter';
 import { useActiveTool } from '../../lib/tools/useActiveTool';
 import { hitTestDocument, shapeBounds } from '../../lib/canvas/hitTest';
-import { BASE_UNIT, snapToGrid, zoomAround } from '../../lib/canvas/coordinates';
+import {
+  BASE_UNIT,
+  snapToGrid,
+  zoomAround,
+} from '../../lib/canvas/coordinates';
 import GridCanvas from './GridCanvas';
 import ShapeRenderer from './ShapeRenderer';
 import PreviewLayer from './PreviewLayer';
@@ -167,10 +171,7 @@ function computeResizedLine(
  * Resizes a circle so its bounding-box corner tracks the pointer.
  * The center stays fixed; the new radius = max(|Δx|, |Δy|) from center.
  */
-function computeResizedCircle(
-  original: CircleShape,
-  pos: Point
-): CircleShape {
+function computeResizedCircle(original: CircleShape, pos: Point): CircleShape {
   const newRadius = Math.max(
     MIN_CIRCLE_RADIUS,
     Math.max(
@@ -183,7 +184,8 @@ function computeResizedCircle(
 
 export default function CanvasEditor() {
   const initialDoc = useMemo(() => loadFromStorage() ?? createDocument(), []);
-  const { doc, dispatch, undo, redo, canUndo, canRedo } = useCanvasHistory(initialDoc);
+  const { doc, dispatch, undo, redo, canUndo, canRedo } =
+    useCanvasHistory(initialDoc);
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -511,7 +513,9 @@ export default function CanvasEditor() {
       }
       const focusedTag = (document.activeElement as HTMLElement)?.tagName;
       const isEditingText =
-        focusedTag === 'INPUT' || focusedTag === 'TEXTAREA' || (document.activeElement as HTMLElement)?.isContentEditable;
+        focusedTag === 'INPUT' ||
+        focusedTag === 'TEXTAREA' ||
+        (document.activeElement as HTMLElement)?.isContentEditable;
       if (
         (e.key === 'Delete' || e.key === 'Backspace') &&
         !isEditingText &&
@@ -532,11 +536,22 @@ export default function CanvasEditor() {
       }
       // Tool shortcuts (only when not typing in an input)
       if (!isEditingText) {
-        if (e.key === 'v' || e.key === 'V') { tool.setTool('select'); return; }
-        if (e.key === 'h' || e.key === 'H') { tool.setTool('hand'); return; }
+        if (e.key === 'v' || e.key === 'V') {
+          tool.setTool('select');
+          return;
+        }
+        if (e.key === 'h' || e.key === 'H') {
+          tool.setTool('hand');
+          return;
+        }
       }
       // Z-order shortcuts (single selected shape, select tool only)
-      if (mod && (e.key === '[' || e.key === ']') && selectionLayerId && selectedShapeIds.length === 1) {
+      if (
+        mod &&
+        (e.key === '[' || e.key === ']') &&
+        selectionLayerId &&
+        selectedShapeIds.length === 1
+      ) {
         e.preventDefault();
         if (e.key === '[') dispatchZOrder(e.altKey ? 'back' : 'backward');
         else dispatchZOrder(e.altKey ? 'front' : 'forward');
@@ -631,7 +646,9 @@ export default function CanvasEditor() {
   // whenever the user is in a pan mode (hand tool, space held, or mid-click).
   const isPanCursor = isHandTool || isSpaceDown;
   const effectiveCursor = isPanCursor
-    ? isPanning ? 'grabbing' : 'grab'
+    ? isPanning
+      ? 'grabbing'
+      : 'grab'
     : canvasCursor;
 
   // When switching away from the select tool, revert to crosshair.
@@ -641,7 +658,8 @@ export default function CanvasEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSelectTool, isHandTool]);
   const activeLayer = doc.layers.find((l) => l.id === activeLayerId);
-  const toolReady = !isSelectTool && !isHandTool && !!activeLayer && !activeLayer.locked;
+  const toolReady =
+    !isSelectTool && !isHandTool && !!activeLayer && !activeLayer.locked;
 
   const pointerDown = isSelectTool
     ? handleSelectPointerDown
@@ -718,7 +736,15 @@ export default function CanvasEditor() {
             <Toolbar activeTool={tool.toolType} onSetTool={tool.setTool} />
           </div>
           <p className="text-xs text-zinc-400 select-none whitespace-nowrap">
-            To move canvas: hold <kbd className="font-mono bg-zinc-100 border border-zinc-300 rounded px-1">Space</kbd>, scroll wheel, or use the hand tool&nbsp;(<kbd className="font-mono bg-zinc-100 border border-zinc-300 rounded px-1">H</kbd>)
+            To move canvas: hold{' '}
+            <kbd className="font-mono bg-zinc-100 border border-zinc-300 rounded px-1">
+              Space
+            </kbd>
+            , scroll wheel, or use the hand tool&nbsp;(
+            <kbd className="font-mono bg-zinc-100 border border-zinc-300 rounded px-1">
+              H
+            </kbd>
+            )
           </p>
         </div>
 
@@ -822,7 +848,12 @@ export default function CanvasEditor() {
                 type: 'UPDATE_VIEWPORT',
                 patch: {
                   zoom: newZoom,
-                  panOffset: zoomAround(center, doc.viewport.zoom, newZoom, doc.viewport.panOffset),
+                  panOffset: zoomAround(
+                    center,
+                    doc.viewport.zoom,
+                    newZoom,
+                    doc.viewport.panOffset
+                  ),
                 },
               });
             } else {

@@ -80,7 +80,12 @@ function ColorSwatch({
  * Displays and edits stroke/fill properties of the currently selected shape.
  * Dispatches `UPDATE_SHAPE_STYLE` on every change.
  */
-export default function PropertiesPanel({ shape, layerId, dispatch, existingKeys }: Props) {
+export default function PropertiesPanel({
+  shape,
+  layerId,
+  dispatch,
+  existingKeys,
+}: Props) {
   // Local draft for the key field — dispatches only on commit (blur / Enter)
   // to keep the undo history clean.
   const [keyDraft, setKeyDraft] = useState(shape?.key ?? '');
@@ -167,7 +172,9 @@ export default function PropertiesPanel({ shape, layerId, dispatch, existingKeys
             spellCheck={false}
           />
           {keyError && (
-            <span className="text-xs text-red-500 leading-tight">{keyError}</span>
+            <span className="text-xs text-red-500 leading-tight">
+              {keyError}
+            </span>
           )}
         </div>
       </Row>

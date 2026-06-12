@@ -348,7 +348,9 @@ function reducer(
           items: mapItemsDeep(l.items, (item) => {
             if (item.id !== action.shapeId) return item;
             if (action.key === undefined) {
-              const { key: _removed, ...rest } = item as typeof item & { key?: string };
+              const { key: _removed, ...rest } = item as typeof item & {
+                key?: string;
+              };
               return rest as LayerItem;
             }
             return { ...item, key: action.key };

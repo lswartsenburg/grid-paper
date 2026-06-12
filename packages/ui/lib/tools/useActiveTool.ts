@@ -86,7 +86,10 @@ export function useActiveTool(
   // Rounds a scalar distance to the nearest snap step (used for circle radius).
   function snapRadius(r: number): number {
     return settings.snapEnabled
-      ? Math.max(settings.snapStep, Math.round(r / settings.snapStep) * settings.snapStep)
+      ? Math.max(
+          settings.snapStep,
+          Math.round(r / settings.snapStep) * settings.snapStep
+        )
       : r;
   }
 

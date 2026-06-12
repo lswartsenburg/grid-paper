@@ -61,18 +61,18 @@ test.describe('history buttons', () => {
     await expect(page.locator('[title="Undo (⌘Z)"]')).toBeDisabled();
 
     await drawRect(page, cx - 80, cy - 50, cx + 80, cy + 50);
-    await expect.poll(() => countDrawnRects(page), { timeout: 3000 }).toBe(
-      beforeCount + 1
-    );
+    await expect
+      .poll(() => countDrawnRects(page), { timeout: 3000 })
+      .toBe(beforeCount + 1);
 
     // Undo must become enabled after a shape is added.
     await expect(page.locator('[title="Undo (⌘Z)"]')).not.toBeDisabled();
 
     // Use JS click to bypass the Next.js dev-overlay portal interception.
     await jsClick(page, '[title="Undo (⌘Z)"]');
-    await expect.poll(() => countDrawnRects(page), { timeout: 3000 }).toBe(
-      beforeCount
-    );
+    await expect
+      .poll(() => countDrawnRects(page), { timeout: 3000 })
+      .toBe(beforeCount);
   });
 
   /**
@@ -94,14 +94,14 @@ test.describe('history buttons', () => {
     await expect(page.locator('[title="Redo (⌘⇧Z)"]')).toBeDisabled();
 
     await jsClick(page, '[title="Undo (⌘Z)"]');
-    await expect.poll(() => countDrawnRects(page), { timeout: 3000 }).toBe(
-      countAfterDraw - 1
-    );
+    await expect
+      .poll(() => countDrawnRects(page), { timeout: 3000 })
+      .toBe(countAfterDraw - 1);
 
     await expect(page.locator('[title="Redo (⌘⇧Z)"]')).not.toBeDisabled();
     await jsClick(page, '[title="Redo (⌘⇧Z)"]');
-    await expect.poll(() => countDrawnRects(page), { timeout: 3000 }).toBe(
-      countAfterDraw
-    );
+    await expect
+      .poll(() => countDrawnRects(page), { timeout: 3000 })
+      .toBe(countAfterDraw);
   });
 });
