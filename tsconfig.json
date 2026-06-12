@@ -1,10 +1,18 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
+      "@/*": ["apps/web/*"],
       "@grid-paper/ui": ["./packages/ui/index.ts"]
     }
   },
-  "include": ["packages/**/*.ts", "packages/**/*.tsx", "apps/**/*.ts", "apps/**/*.tsx"],
+  "include": [
+    "packages/**/*.ts",
+    "packages/**/*.tsx",
+    "apps/**/*.ts",
+    "apps/**/*.tsx"
+  ],
   "exclude": ["node_modules", "**/node_modules", "**/dist", "**/build"]
 }
