@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import type { VectorShape } from '../../types/canvas';
 import type { DrawingAction } from '../../lib/drawing/useDrawingState';
 
@@ -7,6 +8,8 @@ interface Props {
   shape: VectorShape | null;
   layerId: string | null;
   dispatch: React.Dispatch<DrawingAction>;
+  /** Keys already claimed by other shapes — used to block duplicates. */
+  existingKeys?: Set<string>;
 }
 
 type StylePatch = Partial<Pick<VectorShape, 'strokeColor' | 'strokeWidth'>> & {
@@ -29,10 +32,71 @@ function Row({
 }
 
 /**
+ * A fixed-size color swatch that opens the native color picker on click.
+ * Using a hidden overlay input avoids the inconsistent native sizing of
+ * <input type="color"> across browsers and operating systems.
+ */
+function ColorSwatch({
+  value,
+  onChange,
+  title,
+}: {
+  value: string;
+  onChange: (color: string) => void;
+  title?: string;
+}) {
+  return (
+    <div
+      className="relative w-7 h-7 shrink-0 rounded border border-zinc-200 overflow-hidden cursor-pointer"
+      title={title}
+    >
+      <div
+        className="absolute inset-0"
+        style={{ background: value === 'transparent' ? 'white' : value }}
+      />
+      {/* Checkerboard pattern shown behind transparent swatches */}
+      {value === 'transparent' && (
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              'repeating-conic-gradient(#d1d5db 0% 25%, white 0% 50%)',
+            backgroundSize: '8px 8px',
+          }}
+        />
+      )}
+      <input
+        type="color"
+        value={value === 'transparent' ? '#ffffff' : value}
+        onChange={(e) => onChange(e.target.value)}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        title={title}
+      />
+    </div>
+  );
+}
+
+/**
  * Displays and edits stroke/fill properties of the currently selected shape.
  * Dispatches `UPDATE_SHAPE_STYLE` on every change.
  */
-export default function PropertiesPanel({ shape, layerId, dispatch }: Props) {
+export default function PropertiesPanel({
+  shape,
+  layerId,
+  dispatch,
+  existingKeys,
+}: Props) {
+  // Local draft for the key field — dispatches only on commit (blur / Enter)
+  // to keep the undo history clean.
+  const [keyDraft, setKeyDraft] = useState(shape?.key ?? '');
+  const [keyError, setKeyError] = useState<string | null>(null);
+
+  // Reset draft and error whenever the selected shape changes.
+  useEffect(() => {
+    setKeyDraft(shape?.key ?? '');
+    setKeyError(null);
+  }, [shape?.id, shape?.key]);
+
   if (!shape || !layerId) {
     return (
       <div className="flex flex-col flex-1 items-center justify-center p-4">
@@ -52,6 +116,23 @@ export default function PropertiesPanel({ shape, layerId, dispatch }: Props) {
     });
   }
 
+  function commitKey(value: string) {
+    const trimmed = value.trim();
+    // Only dispatch if the value actually changed.
+    if (trimmed === (shape!.key ?? '')) return;
+    if (trimmed !== '' && existingKeys?.has(trimmed)) {
+      setKeyError(`"${trimmed}" is already used`);
+      return;
+    }
+    setKeyError(null);
+    dispatch({
+      type: 'UPDATE_SHAPE_KEY',
+      layerId: layerId!,
+      shapeId: shape!.id,
+      key: trimmed === '' ? undefined : trimmed,
+    });
+  }
+
   const hasFill = shape.type === 'circle' || shape.type === 'rect';
 
   return (
@@ -59,6 +140,44 @@ export default function PropertiesPanel({ shape, layerId, dispatch }: Props) {
       <div className="px-3 pb-2 text-xs text-zinc-400 uppercase tracking-wide font-semibold">
         {shape.type}
       </div>
+
+      <Row label="Key">
+        <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+          <input
+            type="text"
+            value={keyDraft}
+            placeholder="none"
+            onChange={(e) => {
+              setKeyDraft(e.target.value);
+              setKeyError(null);
+            }}
+            onBlur={(e) => commitKey(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                commitKey((e.target as HTMLInputElement).value);
+                (e.target as HTMLInputElement).blur();
+              }
+              if (e.key === 'Escape') {
+                setKeyDraft(shape.key ?? '');
+                setKeyError(null);
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+            className={`w-full text-xs border rounded px-1.5 py-1 text-zinc-700 font-mono placeholder-zinc-300 focus:outline-none focus:ring-1 ${
+              keyError
+                ? 'border-red-400 focus:ring-red-400'
+                : 'border-zinc-200 focus:ring-blue-400'
+            }`}
+            title="Unique key for this shape (used in YAML and data-key attribute)"
+            spellCheck={false}
+          />
+          {keyError && (
+            <span className="text-xs text-red-500 leading-tight">
+              {keyError}
+            </span>
+          )}
+        </div>
+      </Row>
 
       <Row label="Stroke">
         <input

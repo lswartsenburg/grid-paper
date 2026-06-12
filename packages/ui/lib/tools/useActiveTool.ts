@@ -83,6 +83,16 @@ export function useActiveTool(
     return settings.snapEnabled ? snapToGrid(p, settings.snapStep) : p;
   }
 
+  // Rounds a scalar distance to the nearest snap step (used for circle radius).
+  function snapRadius(r: number): number {
+    return settings.snapEnabled
+      ? Math.max(
+          settings.snapStep,
+          Math.round(r / settings.snapStep) * settings.snapStep
+        )
+      : r;
+  }
+
   function base() {
     return {
       strokeColor: settings.strokeColor,
@@ -175,7 +185,7 @@ export function useActiveTool(
             id: 'preview',
             type: 'circle',
             center: anchor,
-            radius: Math.max(0.01, dist(anchor, pos)),
+            radius: Math.max(0.01, snapRadius(dist(anchor, pos))),
             fillColor: settings.fillColor,
           },
         });
@@ -226,7 +236,7 @@ export function useActiveTool(
         break;
       case 'circle': {
         if (!anchor) return;
-        const r = dist(anchor, pos);
+        const r = snapRadius(dist(anchor, pos));
         if (r < 0.01) {
           local({ type: 'CLEAR' });
           return;

@@ -1,5 +1,6 @@
 export type ToolType =
   | 'select'
+  | 'hand'
   | 'line'
   | 'polyline'
   | 'circle'
