@@ -23,12 +23,18 @@ interface Props {
   hiddenIds?: Set<string>;
 }
 
-export default function ShapeRenderer({ document: doc, viewport, hiddenIds }: Props) {
+export default function ShapeRenderer({
+  document: doc,
+  viewport,
+  hiddenIds,
+}: Props) {
   const { zoom, panOffset } = viewport;
 
   return (
     <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-      <g transform={`translate(${panOffset.x} ${panOffset.y}) scale(${BASE_UNIT * zoom})`}>
+      <g
+        transform={`translate(${panOffset.x} ${panOffset.y}) scale(${BASE_UNIT * zoom})`}
+      >
         {doc.layers
           .filter((l) => l.visible)
           .map((layer) => (

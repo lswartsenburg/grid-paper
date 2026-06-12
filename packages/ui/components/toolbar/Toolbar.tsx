@@ -22,7 +22,12 @@ const TOOLS: Tool[] = [
     type: 'line',
     label: 'Line',
     icon: (
-      <svg viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <svg
+        viewBox="0 0 16 16"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      >
         <line x1="2" y1="13" x2="13" y2="2" />
       </svg>
     ),
@@ -31,7 +36,14 @@ const TOOLS: Tool[] = [
     type: 'polyline',
     label: 'Polyline (click; dbl-click to finish)',
     icon: (
-      <svg viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none">
+      <svg
+        viewBox="0 0 16 16"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      >
         <polyline points="2,12 6,4 10,9 14,3" />
       </svg>
     ),
@@ -40,7 +52,12 @@ const TOOLS: Tool[] = [
     type: 'rect',
     label: 'Rectangle',
     icon: (
-      <svg viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5" fill="none">
+      <svg
+        viewBox="0 0 16 16"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        fill="none"
+      >
         <rect x="2" y="4" width="12" height="8" />
       </svg>
     ),
@@ -49,7 +66,12 @@ const TOOLS: Tool[] = [
     type: 'circle',
     label: 'Circle',
     icon: (
-      <svg viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5" fill="none">
+      <svg
+        viewBox="0 0 16 16"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        fill="none"
+      >
         <circle cx="8" cy="8" r="6" />
       </svg>
     ),
@@ -58,7 +80,13 @@ const TOOLS: Tool[] = [
     type: 'freehand',
     label: 'Freehand',
     icon: (
-      <svg viewBox="0 0 16 16" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round">
+      <svg
+        viewBox="0 0 16 16"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        fill="none"
+        strokeLinecap="round"
+      >
         <path d="M 2 13 C 4 9, 5 13, 7 9 S 10 5, 13 3" />
       </svg>
     ),

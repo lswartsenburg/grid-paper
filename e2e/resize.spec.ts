@@ -32,8 +32,11 @@ async function getShapeBox(page: Page) {
 async function getHandleCenters(page: Page) {
   return page.evaluate(() =>
     [...document.querySelectorAll('svg rect')]
-      .filter((r) => r.getAttribute('stroke') === 'rgb(59,130,246)'
-        && r.getAttribute('fill') === 'white')
+      .filter(
+        (r) =>
+          r.getAttribute('stroke') === 'rgb(59,130,246)' &&
+          r.getAttribute('fill') === 'white'
+      )
       .map((r) => {
         const { x, y, width, height } = r.getBoundingClientRect();
         return { cx: x + width / 2, cy: y + height / 2 };
@@ -166,7 +169,9 @@ test.describe('rectangle resize', () => {
    * Dragging the TL corner inward should shrink the rect
    * and shift the origin, while the BR corner stays fixed.
    */
-  test('dragging the TL corner inward shrinks the rect and moves origin', async ({ page }) => {
+  test('dragging the TL corner inward shrinks the rect and moves origin', async ({
+    page,
+  }) => {
     await page.getByTitle('Rectangle').click();
 
     const canvas = page.locator('.touch-none').first();

@@ -62,7 +62,9 @@ export default function YamlEditor({ document: doc, onDocumentChange }: Props) {
         className="flex-1 resize-none font-mono text-xs leading-5 p-3 outline-none text-zinc-800 bg-zinc-50 border-0"
         value={text}
         onChange={handleChange}
-        onFocus={() => { focusedRef.current = true; }}
+        onFocus={() => {
+          focusedRef.current = true;
+        }}
         onBlur={handleBlur}
         spellCheck={false}
         aria-label="YAML drawing source"

@@ -40,7 +40,12 @@ export default function GridCanvas({
     onZoom(newZoom, origin) {
       onViewportChange({
         zoom: newZoom,
-        panOffset: zoomAround(origin, viewport.zoom, newZoom, viewport.panOffset),
+        panOffset: zoomAround(
+          origin,
+          viewport.zoom,
+          newZoom,
+          viewport.panOffset
+        ),
       });
     },
     onPointerDown,

@@ -1,7 +1,9 @@
 <!-- BEGIN:nextjs-agent-rules -->
+
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+
 <!-- END:nextjs-agent-rules -->
 
 # Project Context: Paper Grid Graphing Tool
@@ -9,11 +11,12 @@ This version has breaking changes — APIs, conventions, and file structure may 
 A Next.js standalone frontend application that digitizes traditional paper grids for easy graphing. The codebase is fully open-source, highly modular, and optimized for easy community contributions.
 
 ## Tech Stack & Architecture
+
 - **Framework:** Next.js (App Router, Static Export enabled)
 - **Styling:** Tailwind CSS + CSS Grid for visual grid rendering
 - **State:** Local React State / Context (Keep it simple and standalone; no external database or heavy backend)
 - **Deployment:** Fully client-side standalone build (`next export`)
-- **Future Roadmap:** A completely independent backend will eventually be introduced for storing, managing, sharing, and versioning drawings. 
+- **Future Roadmap:** A completely independent backend will eventually be introduced for storing, managing, sharing, and versioning drawings.
 
 ## Repository Structure (monorepo)
 
@@ -26,6 +29,7 @@ grid-paper/
 Always run commands from the **workspace root** unless a task is specific to one package.
 
 ## Essential Commands
+
 - `pnpm install` - Install all workspace dependencies
 - `pnpm dev` - Start the Next.js demo app (runs `apps/web`)
 - `pnpm build` - Build the demo app
@@ -34,17 +38,20 @@ Always run commands from the **workspace root** unless a task is specific to one
 - `pnpm test` - Execute unit and integration tests
 
 ## Contributor & Documentation Standards
+
 - **Self-Documenting Code:** Always write descriptive variable, function, and component names. Avoid obscure abbreviations.
 - **JSDoc Requirements:** Every utility function, hook, and exported component must have explicit JSDoc comments explaining parameters, return types, and usage.
 - **Inline Explanations:** Comment complex math formulas, coordinate mapping math, or canvas/grid intersection logic inline.
 - **Onboarding Focus:** Keep code highly modular and isolated. Group features (e.g., drawing tools, grid configurations, export utilities) so new contributors can modify parts without breaking the whole system.
 
 ## Layered Canvas & Interaction Architecture
+
 - **Layer-Based Rendering:** All user elements (graphs, annotations, shapes, backgrounds) must be stored in a deterministic, ordered array of layers. Render elements using a strictly controlled top-down composition stack.
 - **Object Selection:** Maintain an active hit-testing mechanism (e.g., bounding-box checks or vector proximity formulas) so individual layers or geometric objects within a layer can be independently targeted and highlighted.
 - **Dynamic Object Editing:** Once selected, elements must expose an interface for real-time mutations (e.g., updating coordinates, modifying line stroke weights, altering geometric dimensions, or deleting layers completely).
 
 ## Backend-Ready Architecture Rules
+
 - **Serializable Data Structures:** Model all graph/drawing data structures explicitly as flat, JSON-serializable objects (including ordered layer arrays, IDs, coordinates, and metadata). This ensures zero friction when migrating to an external database schema later.
 - **Decoupled State Management:** Keep the code for rendering/drawing logic entirely separate from data persistence logic. Abstract all local storage/session handling behind a single interface or service layer (e.g., custom hooks). This will allow contributors to cleanly swap local browser storage for API fetch requests down the road.
 - **Immutable Drawing States:** Design drawing data structures to support snapshotting and history tracking (undo/redo). This foundation is required to cleanly support backend versioning later.
@@ -64,13 +71,15 @@ This project must be publishable as a standalone React package (à la [Excalidra
 ### Package build target (future)
 
 When the package build is wired up (Phase 5), add **tsup** to `packages/ui` to produce:
+
 - `dist/index.mjs` — ESM bundle
-- `dist/index.cjs` — CJS bundle  
+- `dist/index.cjs` — CJS bundle
 - `dist/index.d.ts` — TypeScript declarations
 - `dist/style.css` — Tailwind output
 
 Update `packages/ui/package.json`'s `exports` field to point to `dist/` targets with separate `import` / `require` / `types` conditions. During development, the `exports` field points to TypeScript source directly (`./index.ts`) so no build step is needed to iterate.
 
 ## UI/UX & Technical Directives
+
 - **Grid Snapping:** Handle crisp coordinate alignment to simulated graph paper lines during creation and transformation.
 - **Input Parity:** Support high-precision mouse tracking alongside responsive touch/stylus inputs for drawing and selection.

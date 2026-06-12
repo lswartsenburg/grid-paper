@@ -100,7 +100,10 @@ export function useCanvasPointer<T extends HTMLElement>(options: Options) {
         const dist = pinchDistance(a, b);
         const mid = pinchMidpoint(a, b);
 
-        if (lastPinchDistRef.current !== null && lastPinchMidRef.current !== null) {
+        if (
+          lastPinchDistRef.current !== null &&
+          lastPinchMidRef.current !== null
+        ) {
           const scale = dist / lastPinchDistRef.current;
           const newZoom = clampZoom(viewport.zoom * scale);
           onZoom?.(newZoom, mid);
@@ -118,14 +121,20 @@ export function useCanvasPointer<T extends HTMLElement>(options: Options) {
       }
 
       if (isPanningRef.current) {
-        const delta = { x: screen.x - lastScreenRef.current.x, y: screen.y - lastScreenRef.current.y };
+        const delta = {
+          x: screen.x - lastScreenRef.current.x,
+          y: screen.y - lastScreenRef.current.y,
+        };
         lastScreenRef.current = screen;
         onPan?.(delta);
         return;
       }
 
       if (e.pointerId === activePointerIdRef.current) {
-        const delta = { x: screen.x - lastScreenRef.current.x, y: screen.y - lastScreenRef.current.y };
+        const delta = {
+          x: screen.x - lastScreenRef.current.x,
+          y: screen.y - lastScreenRef.current.y,
+        };
         lastScreenRef.current = screen;
         onPointerMove?.(screenToGrid(screen, viewport), delta, e);
       } else if (activePointerIdRef.current === null) {
@@ -142,7 +151,10 @@ export function useCanvasPointer<T extends HTMLElement>(options: Options) {
       lastPinchDistRef.current = null;
       lastPinchMidRef.current = null;
 
-      if (isPanningRef.current && (e.button === 1 || (e.button === 0 && isSpaceDownRef.current))) {
+      if (
+        isPanningRef.current &&
+        (e.button === 1 || (e.button === 0 && isSpaceDownRef.current))
+      ) {
         isPanningRef.current = false;
         return;
       }

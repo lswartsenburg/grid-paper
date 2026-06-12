@@ -1,4 +1,10 @@
-export type ToolType = 'select' | 'line' | 'polyline' | 'circle' | 'rect' | 'freehand';
+export type ToolType =
+  | 'select'
+  | 'line'
+  | 'polyline'
+  | 'circle'
+  | 'rect'
+  | 'freehand';
 
 export interface ToolSettings {
   strokeColor: string;

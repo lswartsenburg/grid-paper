@@ -9,18 +9,15 @@ import type {
   Viewport,
   GridConfig,
 } from '../../types/canvas';
-import type {
-  YamlDocument,
-  YamlItem,
-  YamlPoint,
-} from './schema';
+import type { YamlDocument, YamlItem, YamlPoint } from './schema';
 
 const DEFAULT_STROKE = '#1a1a1a';
 const DEFAULT_STROKE_WIDTH = 1.5;
 const DEFAULT_FILL = 'transparent';
 
 function point(p: YamlPoint): Point {
-  if (!Array.isArray(p) || p.length < 2) throw new Error(`Invalid point: ${JSON.stringify(p)}`);
+  if (!Array.isArray(p) || p.length < 2)
+    throw new Error(`Invalid point: ${JSON.stringify(p)}`);
   return { x: Number(p[0]), y: Number(p[1]) };
 }
 
@@ -86,7 +83,9 @@ function parseItem(raw: YamlItem): LayerItem {
       return { ...base, type: 'freehand', points: raw.points.map(point) };
     }
     default:
-      throw new Error(`Unknown shape type: "${(raw as { type: string }).type}"`);
+      throw new Error(
+        `Unknown shape type: "${(raw as { type: string }).type}"`
+      );
   }
 }
 
@@ -121,11 +120,17 @@ export function parseYaml(
   try {
     raw = load(yamlStr);
   } catch (e) {
-    return { document: null, error: `YAML syntax error: ${(e as Error).message}` };
+    return {
+      document: null,
+      error: `YAML syntax error: ${(e as Error).message}`,
+    };
   }
 
   if (!raw || typeof raw !== 'object') {
-    return { document: null, error: 'Document must be a YAML mapping at the top level.' };
+    return {
+      document: null,
+      error: 'Document must be a YAML mapping at the top level.',
+    };
   }
 
   const yaml = raw as YamlDocument;
@@ -134,7 +139,16 @@ export function parseYaml(
     const layers: Layer[] =
       yaml.layers && Array.isArray(yaml.layers)
         ? yaml.layers.map(parseLayer)
-        : [{ id: crypto.randomUUID(), name: 'Layer 1', visible: true, locked: false, items: [], annotations: [] }];
+        : [
+            {
+              id: crypto.randomUUID(),
+              name: 'Layer 1',
+              visible: true,
+              locked: false,
+              items: [],
+              annotations: [],
+            },
+          ];
 
     const gridConfig: GridConfig = {
       majorEvery: yaml.grid?.majorEvery ?? current.gridConfig.majorEvery,

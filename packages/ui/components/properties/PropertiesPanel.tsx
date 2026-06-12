@@ -9,9 +9,17 @@ interface Props {
   dispatch: React.Dispatch<DrawingAction>;
 }
 
-type StylePatch = Partial<Pick<VectorShape, 'strokeColor' | 'strokeWidth'>> & { fillColor?: string };
+type StylePatch = Partial<Pick<VectorShape, 'strokeColor' | 'strokeWidth'>> & {
+  fillColor?: string;
+};
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex items-center gap-2 px-3 py-1.5">
       <span className="w-16 shrink-0 text-xs text-zinc-400">{label}</span>
@@ -28,13 +36,20 @@ export default function PropertiesPanel({ shape, layerId, dispatch }: Props) {
   if (!shape || !layerId) {
     return (
       <div className="flex flex-col flex-1 items-center justify-center p-4">
-        <p className="text-xs text-zinc-400 text-center">Select a shape to edit its properties.</p>
+        <p className="text-xs text-zinc-400 text-center">
+          Select a shape to edit its properties.
+        </p>
       </div>
     );
   }
 
   function update(patch: StylePatch) {
-    dispatch({ type: 'UPDATE_SHAPE_STYLE', layerId: layerId!, shapeId: shape!.id, patch });
+    dispatch({
+      type: 'UPDATE_SHAPE_STYLE',
+      layerId: layerId!,
+      shapeId: shape!.id,
+      patch,
+    });
   }
 
   const hasFill = shape.type === 'circle' || shape.type === 'rect';
@@ -70,7 +85,9 @@ export default function PropertiesPanel({ shape, layerId, dispatch }: Props) {
         <Row label="Fill">
           <input
             type="color"
-            value={shape.fillColor === 'transparent' ? '#ffffff' : shape.fillColor}
+            value={
+              shape.fillColor === 'transparent' ? '#ffffff' : shape.fillColor
+            }
             onChange={(e) => update({ fillColor: e.target.value })}
             className="w-7 h-7 rounded cursor-pointer border border-zinc-200 p-0.5 bg-white"
             title="Fill color"
