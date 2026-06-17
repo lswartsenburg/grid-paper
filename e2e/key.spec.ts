@@ -67,7 +67,9 @@ test.describe('shape key', () => {
       .toHaveLength(4);
 
     // Type a key and commit with Enter.
-    const keyInput = page.getByPlaceholder('none');
+    const keyInput = page.getByTitle(
+      'Unique key for this shape (used in YAML and data-key attribute)'
+    );
     await keyInput.fill('my-rect');
     await keyInput.press('Enter');
 
@@ -102,7 +104,9 @@ test.describe('shape key', () => {
       .toHaveLength(4);
 
     // Give the shape a key so there is text to delete in the input.
-    const keyInput = page.getByPlaceholder('none');
+    const keyInput = page.getByTitle(
+      'Unique key for this shape (used in YAML and data-key attribute)'
+    );
     await keyInput.fill('delete-me');
     await keyInput.press('Enter');
     await expect(page.locator('[data-key="delete-me"]')).toBeVisible();
@@ -149,7 +153,9 @@ test.describe('shape key', () => {
       .poll(() => getHandleCenters(page), { timeout: 3000 })
       .toHaveLength(4);
 
-    const keyInput = page.getByPlaceholder('none');
+    const keyInput = page.getByTitle(
+      'Unique key for this shape (used in YAML and data-key attribute)'
+    );
     await keyInput.fill('target');
     await keyInput.press('Enter');
 

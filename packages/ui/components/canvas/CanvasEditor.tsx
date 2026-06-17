@@ -1,19 +1,17 @@
 'use client';
 
 import {
-  useMemo,
   useState,
+  useMemo,
   useCallback,
   useEffect,
   useRef,
   useLayoutEffect,
 } from 'react';
-import { createDocument, collectKeys } from '../../lib/drawing/useDrawingState';
+import { collectKeys } from '../../lib/drawing/useDrawingState';
 import { useCanvasHistory } from '../../lib/drawing/useCanvasHistory';
-import {
-  loadFromStorage,
-  useStorageAdapter,
-} from '../../lib/storage/useStorageAdapter';
+import { useStorageAdapter } from '../../lib/storage/useStorageAdapter';
+import type { StorageAdapter } from '../../lib/storage/StorageAdapter';
 import { useActiveTool } from '../../lib/tools/useActiveTool';
 import { hitTestDocument, shapeBounds } from '../../lib/canvas/hitTest';
 import {
@@ -45,7 +43,7 @@ import type {
 
 // ─── Resize helpers ───────────────────────────────────────────────────────────
 
-/** Screen-pixel radius used to snap onto a corner handle. */
+/** Screen-pixel radius used to snap onto a corner or endpoint handle. */
 const CORNER_HIT_PX = 12;
 
 /** SelectionOverlay renders corner handles with this inset/outset in grid units. */
@@ -54,8 +52,29 @@ const CORNER_PAD = 0.25;
 type ResizeCorner = 'tl' | 'tr' | 'bl' | 'br';
 
 /**
- * Returns which corner of the selection bounds the pointer is near, or null.
+ * Returns 0 or 1 if the pointer is near endpoint 0 or 1 of a line, else null.
  * Uses the same screen-pixel formula as hitTest.ts: threshold = PX / (BASE_UNIT * zoom).
+ */
+function hitTestLineEndpoints(
+  line: LineShape,
+  pos: Point,
+  zoom: number
+): 0 | 1 | null {
+  const threshold = CORNER_HIT_PX / (BASE_UNIT * zoom);
+  if (
+    Math.hypot(pos.x - line.points[0].x, pos.y - line.points[0].y) <= threshold
+  )
+    return 0;
+  if (
+    Math.hypot(pos.x - line.points[1].x, pos.y - line.points[1].y) <= threshold
+  )
+    return 1;
+  return null;
+}
+
+/**
+ * Returns which corner of the selection bounds the pointer is near, or null.
+ * Used for rect and circle resize handles.
  */
 function hitTestCorners(
   bounds: { minX: number; minY: number; maxX: number; maxY: number },
@@ -76,6 +95,28 @@ function hitTestCorners(
 }
 
 const MIN_RECT_SIZE = 0.5; // grid units — prevents collapsing to zero
+
+/** Creates an offset copy of a shape with a new id and no key. */
+function duplicateShape(shape: VectorShape): VectorShape {
+  const id = crypto.randomUUID();
+  const move = (p: Point): Point => ({ x: p.x + 1, y: p.y + 1 });
+  switch (shape.type) {
+    case 'line':
+      return {
+        ...shape,
+        id,
+        key: undefined,
+        points: [move(shape.points[0]), move(shape.points[1])],
+      };
+    case 'polyline':
+    case 'freehand':
+      return { ...shape, id, key: undefined, points: shape.points.map(move) };
+    case 'circle':
+      return { ...shape, id, key: undefined, center: move(shape.center) };
+    case 'rect':
+      return { ...shape, id, key: undefined, origin: move(shape.origin) };
+  }
+}
 
 /** CSS cursor values for each resize corner. */
 const CORNER_CURSORS: Record<ResizeCorner, string> = {
@@ -135,26 +176,6 @@ function computeResizedRect(
 const MIN_CIRCLE_RADIUS = 0.5;
 
 /**
- * Returns which of a line's two endpoints is closest to the given corner of
- * its bounding box. Used to decide which endpoint a corner drag moves.
- */
-function lineEndpointForCorner(
-  line: LineShape,
-  corner: ResizeCorner,
-  bounds: { minX: number; minY: number; maxX: number; maxY: number }
-): 0 | 1 {
-  const cp = {
-    tl: { x: bounds.minX - CORNER_PAD, y: bounds.minY - CORNER_PAD },
-    tr: { x: bounds.maxX + CORNER_PAD, y: bounds.minY - CORNER_PAD },
-    br: { x: bounds.maxX + CORNER_PAD, y: bounds.maxY + CORNER_PAD },
-    bl: { x: bounds.minX - CORNER_PAD, y: bounds.maxY + CORNER_PAD },
-  }[corner];
-  const d0 = Math.hypot(line.points[0].x - cp.x, line.points[0].y - cp.y);
-  const d1 = Math.hypot(line.points[1].x - cp.x, line.points[1].y - cp.y);
-  return d0 <= d1 ? 0 : 1;
-}
-
-/**
  * Moves one endpoint of a line to `pos`, leaving the other fixed.
  */
 function computeResizedLine(
@@ -182,8 +203,23 @@ function computeResizedCircle(original: CircleShape, pos: Point): CircleShape {
   return { ...original, radius: newRadius };
 }
 
-export default function CanvasEditor() {
-  const initialDoc = useMemo(() => loadFromStorage() ?? createDocument(), []);
+interface CanvasEditorProps {
+  /** Document to open. Provided by the parent after async load. */
+  initialDoc: DrawingDocument;
+  /** Storage backend used to auto-save on every change. */
+  adapter: StorageAdapter;
+  /**
+   * When true, hides the toolbar and disables all drawing/editing interactions.
+   * Pan and zoom remain fully functional so viewers can explore the drawing.
+   */
+  readOnly?: boolean;
+}
+
+export default function CanvasEditor({
+  initialDoc,
+  adapter,
+  readOnly = false,
+}: CanvasEditorProps) {
   const { doc, dispatch, undo, redo, canUndo, canRedo } =
     useCanvasHistory(initialDoc);
   const [activePanel, setActivePanel] = useState<string | null>(null);
@@ -261,8 +297,24 @@ export default function CanvasEditor() {
     updateCursor('default');
   }, []);
 
+  const handleDeleteSelected = useCallback(() => {
+    if (!selectionLayerId || selectedShapeIds.length === 0) return;
+    selectedShapeIds.forEach((shapeId) =>
+      dispatch({ type: 'DELETE_SHAPE', layerId: selectionLayerId, shapeId })
+    );
+    clearSelection();
+  }, [selectionLayerId, selectedShapeIds, dispatch, clearSelection]);
+
+  const handleDuplicateSelected = useCallback(() => {
+    const shapes = selectedShapesRef.current;
+    if (!selectionLayerId || shapes.length === 0) return;
+    const newShape = duplicateShape(shapes[0]);
+    dispatch({ type: 'ADD_SHAPE', layerId: selectionLayerId, shape: newShape });
+    setSelectedShapeIds([newShape.id]);
+  }, [selectionLayerId, dispatch]);
+
   const tool = useActiveTool(dispatch, activeLayerId);
-  useStorageAdapter(doc);
+  useStorageAdapter(doc, adapter);
 
   // Keeps the latest snap settings available inside stable pointer callbacks.
   const snapSettingsRef = useRef(tool.settings);
@@ -324,15 +376,11 @@ export default function CanvasEditor() {
     (pos: Point) => {
       const d = docRef.current;
 
-      // Check corners first if exactly one resizable shape is selected.
+      // Check handles first if exactly one resizable shape is selected.
       const currentShapes = selectedShapesRef.current;
       if (currentShapes.length === 1) {
         const shape = currentShapes[0];
-        if (
-          shape.type === 'rect' ||
-          shape.type === 'line' ||
-          shape.type === 'circle'
-        ) {
+        if (shape.type === 'rect' || shape.type === 'circle') {
           const bounds = shapeBounds(currentShapes);
           if (bounds) {
             const corner = hitTestCorners(bounds, pos, d.viewport.zoom);
@@ -340,16 +388,20 @@ export default function CanvasEditor() {
               resizeCornerRef.current = corner;
               resizeOriginalRef.current = shape;
               dragOriginRef.current = pos;
-              if (shape.type === 'line') {
-                resizeLineEndpointRef.current = lineEndpointForCorner(
-                  shape,
-                  corner,
-                  bounds
-                );
-              }
               updateCursor(CORNER_CURSORS[corner]);
               return; // keep existing selection, begin resize
             }
+          }
+        } else if (shape.type === 'line') {
+          const endpointIdx = hitTestLineEndpoints(shape, pos, d.viewport.zoom);
+          if (endpointIdx !== null) {
+            // Use 'tl'/'br' as placeholders — only resizeLineEndpointRef matters for lines.
+            resizeCornerRef.current = endpointIdx === 0 ? 'tl' : 'br';
+            resizeOriginalRef.current = shape;
+            resizeLineEndpointRef.current = endpointIdx;
+            dragOriginRef.current = pos;
+            updateCursor('crosshair');
+            return;
           }
         }
       }
@@ -415,7 +467,7 @@ export default function CanvasEditor() {
     const shapes = selectedShapesRef.current;
     if (shapes.length === 1) {
       const s = shapes[0];
-      if (s.type === 'rect' || s.type === 'line' || s.type === 'circle') {
+      if (s.type === 'rect' || s.type === 'circle') {
         const bounds = shapeBounds(shapes);
         if (bounds) {
           const corner = hitTestCorners(bounds, pos, d.viewport.zoom);
@@ -423,6 +475,11 @@ export default function CanvasEditor() {
             updateCursor(CORNER_CURSORS[corner]);
             return;
           }
+        }
+      } else if (s.type === 'line') {
+        if (hitTestLineEndpoints(s, pos, d.viewport.zoom) !== null) {
+          updateCursor('crosshair');
+          return;
         }
       }
     }
@@ -500,6 +557,7 @@ export default function CanvasEditor() {
   // --- Keyboard shortcuts ---
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      if (readOnly) return;
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
@@ -644,7 +702,7 @@ export default function CanvasEditor() {
 
   // Compute the effective canvas cursor, overriding the drawing-tool cursor
   // whenever the user is in a pan mode (hand tool, space held, or mid-click).
-  const isPanCursor = isHandTool || isSpaceDown;
+  const isPanCursor = readOnly || isHandTool || isSpaceDown;
   const effectiveCursor = isPanCursor
     ? isPanning
       ? 'grabbing'
@@ -661,21 +719,27 @@ export default function CanvasEditor() {
   const toolReady =
     !isSelectTool && !isHandTool && !!activeLayer && !activeLayer.locked;
 
-  const pointerDown = isSelectTool
-    ? handleSelectPointerDown
-    : toolReady
-      ? tool.handlePointerDown
-      : undefined;
-  const pointerMove = isSelectTool
-    ? handleSelectPointerMove
-    : toolReady
-      ? (pos: Point) => tool.handlePointerMove(pos)
-      : undefined;
-  const pointerUp = isSelectTool
-    ? handleSelectPointerUp
-    : toolReady
-      ? tool.handlePointerUp
-      : undefined;
+  const pointerDown = readOnly
+    ? undefined
+    : isSelectTool
+      ? handleSelectPointerDown
+      : toolReady
+        ? tool.handlePointerDown
+        : undefined;
+  const pointerMove = readOnly
+    ? undefined
+    : isSelectTool
+      ? handleSelectPointerMove
+      : toolReady
+        ? (pos: Point) => tool.handlePointerMove(pos)
+        : undefined;
+  const pointerUp = readOnly
+    ? undefined
+    : isSelectTool
+      ? handleSelectPointerUp
+      : toolReady
+        ? tool.handlePointerUp
+        : undefined;
 
   // --- Sidebar panels ---
   const panels: SidebarPanel[] = [
@@ -731,22 +795,24 @@ export default function CanvasEditor() {
     <div className="flex flex-1 overflow-hidden">
       {/* Canvas area — toolbar floats at top center */}
       <div ref={containerRef} className="relative flex flex-1 overflow-hidden">
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none flex flex-col items-center gap-2">
-          <div className="pointer-events-auto">
-            <Toolbar activeTool={tool.toolType} onSetTool={tool.setTool} />
+        {!readOnly && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none flex flex-col items-center gap-2">
+            <div className="pointer-events-auto">
+              <Toolbar activeTool={tool.toolType} onSetTool={tool.setTool} />
+            </div>
+            <p className="text-xs text-zinc-400 select-none whitespace-nowrap">
+              To move canvas: hold{' '}
+              <kbd className="font-mono bg-zinc-100 border border-zinc-300 rounded px-1">
+                Space
+              </kbd>
+              , scroll wheel, or use the hand tool&nbsp;(
+              <kbd className="font-mono bg-zinc-100 border border-zinc-300 rounded px-1">
+                H
+              </kbd>
+              )
+            </p>
           </div>
-          <p className="text-xs text-zinc-400 select-none whitespace-nowrap">
-            To move canvas: hold{' '}
-            <kbd className="font-mono bg-zinc-100 border border-zinc-300 rounded px-1">
-              Space
-            </kbd>
-            , scroll wheel, or use the hand tool&nbsp;(
-            <kbd className="font-mono bg-zinc-100 border border-zinc-300 rounded px-1">
-              H
-            </kbd>
-            )
-          </p>
-        </div>
+        )}
 
         <GridCanvas
           viewport={doc.viewport}
@@ -758,7 +824,7 @@ export default function CanvasEditor() {
           onPointerMove={pointerMove}
           onPointerUp={pointerUp}
           onContextMenu={handleCanvasContextMenu}
-          isPanMode={isHandTool}
+          isPanMode={readOnly || isHandTool}
           onPanStart={handlePanStart}
           onPanEnd={handlePanEnd}
           cursorStyle={effectiveCursor}
@@ -787,7 +853,7 @@ export default function CanvasEditor() {
         </GridCanvas>
 
         {/* Z-order context menu — shown on right-click over a shape */}
-        {contextMenuPos && selectedShapes.length === 1 && (
+        {!readOnly && contextMenuPos && selectedShapes.length === 1 && (
           <ContextMenu
             x={contextMenuPos.x}
             y={contextMenuPos.y}
@@ -822,52 +888,62 @@ export default function CanvasEditor() {
         )}
 
         {/* Floating properties panel — visible only when a shape is selected */}
-        {selectedShapes.length > 0 && (
+        {!readOnly && selectedShapes.length > 0 && (
           <div className="absolute left-3 top-20 z-10 w-52 bg-white rounded-xl border border-zinc-200 shadow-lg overflow-hidden pointer-events-auto">
             <PropertiesPanel
               shape={selectedShapes[0]}
               layerId={selectionLayerId}
               dispatch={dispatch}
               existingKeys={existingKeys}
+              onDelete={handleDeleteSelected}
+              onDuplicate={handleDuplicateSelected}
             />
           </div>
         )}
 
-        <BottomBar
-          zoom={doc.viewport.zoom}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          onUndo={undo}
-          onRedo={redo}
-          onZoomChange={(newZoom) => {
-            const el = containerRef.current;
-            if (el) {
-              const { width, height } = el.getBoundingClientRect();
-              const center = { x: width / 2, y: height / 2 };
-              dispatch({
-                type: 'UPDATE_VIEWPORT',
-                patch: {
-                  zoom: newZoom,
-                  panOffset: zoomAround(
-                    center,
-                    doc.viewport.zoom,
-                    newZoom,
-                    doc.viewport.panOffset
-                  ),
-                },
-              });
-            } else {
-              dispatch({ type: 'UPDATE_VIEWPORT', patch: { zoom: newZoom } });
+        {!readOnly && (
+          <BottomBar
+            zoom={doc.viewport.zoom}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={undo}
+            onRedo={redo}
+            gridConfig={doc.gridConfig}
+            onGridConfigChange={(patch) =>
+              dispatch({ type: 'UPDATE_GRID_CONFIG', patch })
             }
-          }}
-        />
+            onZoomChange={(newZoom) => {
+              const el = containerRef.current;
+              if (el) {
+                const { width, height } = el.getBoundingClientRect();
+                const center = { x: width / 2, y: height / 2 };
+                dispatch({
+                  type: 'UPDATE_VIEWPORT',
+                  patch: {
+                    zoom: newZoom,
+                    panOffset: zoomAround(
+                      center,
+                      doc.viewport.zoom,
+                      newZoom,
+                      doc.viewport.panOffset
+                    ),
+                  },
+                });
+              } else {
+                dispatch({ type: 'UPDATE_VIEWPORT', patch: { zoom: newZoom } });
+              }
+            }}
+          />
+        )}
       </div>
 
-      <RightSidebar
-        panels={panels}
-        activePanel={activePanel}
-        onTogglePanel={togglePanel}
-      />
+      {!readOnly && (
+        <RightSidebar
+          panels={panels}
+          activePanel={activePanel}
+          onTogglePanel={togglePanel}
+        />
+      )}
     </div>
   );
 }

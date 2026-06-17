@@ -16,8 +16,12 @@ export interface YamlBaseShape {
   /** Human-readable identifier. Preserved as the shape's `key` in the data
    *  model and rendered as `data-key` in the DOM. */
   key?: string;
+  /** Text label rendered at the center of the shape on the canvas. */
+  label?: string;
   stroke?: string;
   strokeWidth?: number;
+  /** Stroke dash pattern. Defaults to solid when omitted. */
+  strokeDash?: 'solid' | 'dashed' | 'dotted';
 }
 
 export interface YamlLineShape extends YamlBaseShape {
@@ -76,8 +80,25 @@ export interface YamlLayer {
 
 export interface YamlDocument {
   title?: string;
+  /**
+   * Grid configuration. All fields are optional — omitted fields fall back to
+   * their defaults so the YAML only needs to declare what differs.
+   *
+   * Example (1 cell = 10 cm, major lines every 5 cells):
+   *   grid:
+   *     majorEvery: 5
+   *     unit: "cm"
+   *     cellSize: 10
+   */
   grid?: {
+    /** Minor cells per major grid line. Default: 5. */
     majorEvery?: number;
+    /** Snap shapes to the nearest grid intersection. Default: true. */
+    snapToGrid?: boolean;
+    /** Real-world unit label for one minor cell, e.g. "cm", "ft", "in", "m". */
+    unit?: string;
+    /** How many `unit`s one minor cell represents. Default: 1. */
+    cellSize?: number;
   };
   layers?: YamlLayer[];
 }

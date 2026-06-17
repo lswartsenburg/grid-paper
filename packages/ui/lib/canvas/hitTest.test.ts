@@ -22,7 +22,7 @@ function makeDoc(...shapes: VectorShape[]): DrawingDocument {
     createdAt: '',
     updatedAt: '',
     viewport: { zoom: 1, panOffset: { x: 0, y: 0 } },
-    gridConfig: { majorEvery: 5 },
+    gridConfig: { majorEvery: 5, snapToGrid: true, cellSize: 1 },
     layers: [layer],
   };
 }

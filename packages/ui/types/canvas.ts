@@ -8,8 +8,15 @@ interface BaseShape {
   /** Optional human-readable identifier. Serialized as `key:` in YAML and
    *  rendered as `data-key` in the DOM for easy test selection. */
   key?: string;
+  /**
+   * Optional text label rendered at the center of the shape on the canvas.
+   * Useful for annotating shapes without requiring a separate annotation layer.
+   */
+  label?: string;
   strokeColor: string;
   strokeWidth: number;
+  /** Stroke dash pattern. Omitting or setting to 'solid' renders a solid line. */
+  strokeDash?: 'solid' | 'dashed' | 'dotted';
 }
 
 export interface LineShape extends BaseShape {
@@ -85,7 +92,20 @@ export interface Viewport {
 }
 
 export interface GridConfig {
-  majorEvery: number; // how many minor cells make one major cell (e.g. 4, 5, 8, 10)
+  /** How many minor cells make one major cell (e.g. 4, 5, 8, 10). */
+  majorEvery: number;
+  /** Whether shapes snap to the nearest grid intersection while drawing or dragging. */
+  snapToGrid: boolean;
+  /**
+   * Real-world unit label for one minor cell — e.g. `"cm"`, `"ft"`, `"in"`, `"m"`.
+   * Omit (undefined) when no unit is assigned.
+   */
+  unit?: string;
+  /**
+   * How many `unit`s one minor cell represents.
+   * Only meaningful when `unit` is set. Defaults to 1.
+   */
+  cellSize: number;
 }
 
 export interface DrawingDocument {

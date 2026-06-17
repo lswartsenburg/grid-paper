@@ -6,6 +6,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 <!-- END:nextjs-agent-rules -->
 
+## Environment Setup
+
+Run `nvm use` at the start of every session to activate the Node version pinned in `.nvmrc`.
+
 # Project Context: Paper Grid Graphing Tool
 
 A Next.js standalone frontend application that digitizes traditional paper grids for easy graphing. The codebase is fully open-source, highly modular, and optimized for easy community contributions.
@@ -78,6 +82,34 @@ When the package build is wired up (Phase 5), add **tsup** to `packages/ui` to p
 - `dist/style.css` — Tailwind output
 
 Update `packages/ui/package.json`'s `exports` field to point to `dist/` targets with separate `import` / `require` / `types` conditions. During development, the `exports` field points to TypeScript source directly (`./index.ts`) so no build step is needed to iterate.
+
+## YAML as the Canonical Document Format
+
+Every element that can appear on the canvas **must be expressible in YAML**. YAML is the primary serialization format for drawings — used for import/export, LLM authoring, testing, and future backend storage.
+
+### Hard rules
+
+- **Full round-trip parity:** Every shape type, layer property, group, annotation, and grid setting that exists in the data model (`DrawingDocument`) must have a corresponding YAML representation. If you can draw it, you must be able to write it in YAML and get an identical result.
+- **Update the spec when you add features:** Any time a new shape type, shape property, layer field, or grid setting is added, the following files must be updated in the same PR:
+  - `packages/ui/lib/yaml/schema.ts` — TypeScript types for the YAML format
+  - `packages/ui/lib/yaml/parse.ts` — deserializer (YAML → `DrawingDocument`)
+  - `packages/ui/lib/yaml/serialize.ts` — serializer (`DrawingDocument` → YAML)
+  - `packages/ui/lib/yaml/yaml.test.ts` — round-trip tests for the new field
+- **Omit-defaults convention:** Fields at their default value must be omitted from serialized output so YAML stays human-readable and LLM-friendly. Parsers must always fall back to the documented default when a field is absent.
+- **Coordinates in grid units:** All spatial values in YAML are in grid units, never in canvas pixels. This keeps documents resolution-independent and backend-portable.
+
+### Reference
+
+The YAML schema is documented in `packages/ui/lib/yaml/schema.ts`. A minimal valid document:
+
+```yaml
+layers:
+  - name: Layer 1
+    shapes:
+      - type: line
+        from: [0, 0]
+        to: [5, 3]
+```
 
 ## UI/UX & Technical Directives
 
