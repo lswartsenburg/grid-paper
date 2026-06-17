@@ -15,6 +15,8 @@ interface BaseShape {
   label?: string;
   strokeColor: string;
   strokeWidth: number;
+  /** Stroke dash pattern. Omitting or setting to 'solid' renders a solid line. */
+  strokeDash?: 'solid' | 'dashed' | 'dotted';
 }
 
 export interface LineShape extends BaseShape {

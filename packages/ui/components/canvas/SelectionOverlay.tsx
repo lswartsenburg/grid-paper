@@ -1,6 +1,6 @@
 'use client';
 
-import type { VectorShape, Viewport } from '../../types/canvas';
+import type { VectorShape, Viewport, LineShape } from '../../types/canvas';
 import { BASE_UNIT } from '../../lib/canvas/coordinates';
 import { shapeBounds } from '../../lib/canvas/hitTest';
 
@@ -16,8 +16,11 @@ const PAD = 0.25; // grid-unit padding around the selection box
 
 /**
  * Renders a dashed bounding-box overlay around selected shapes.
- * During drag the box follows the cursor while shapes stay in place,
- * so the user sees where they will land on release.
+ *
+ * Handle rendering rules:
+ *   - rect / circle: four corner squares (resizable)
+ *   - line: two circles at the actual endpoints (endpoint-drag resize)
+ *   - freehand / polyline: no handles (not resizable)
  */
 export default function SelectionOverlay({
   shapes,
@@ -43,12 +46,19 @@ export default function SelectionOverlay({
   const dashOn = 4 / scale;
   const dashOff = 3 / scale;
 
-  const corners: [number, number][] = [
-    [bx, by],
-    [bx + bw, by],
-    [bx + bw, by + bh],
-    [bx, by + bh],
-  ];
+  const singleShape = shapes.length === 1 ? shapes[0] : null;
+  const showCornerHandles =
+    singleShape?.type === 'rect' || singleShape?.type === 'circle';
+  const showEndpointHandles = singleShape?.type === 'line';
+
+  const corners: [number, number][] = showCornerHandles
+    ? [
+        [bx, by],
+        [bx + bw, by],
+        [bx + bw, by + bh],
+        [bx, by + bh],
+      ]
+    : [];
 
   return (
     <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
@@ -65,7 +75,7 @@ export default function SelectionOverlay({
           strokeDasharray={`${dashOn} ${dashOff}`}
           rx={2 / scale}
         />
-        {/* Corner handles */}
+        {/* Corner handles for rect and circle */}
         {corners.map(([cx, cy], i) => (
           <rect
             key={i}
@@ -79,6 +89,19 @@ export default function SelectionOverlay({
             rx={1 / scale}
           />
         ))}
+        {/* Endpoint handles for line shapes — placed at actual endpoints, not bbox corners */}
+        {showEndpointHandles &&
+          (singleShape as LineShape).points.map((pt, i) => (
+            <circle
+              key={i}
+              cx={pt.x + dragDelta.x}
+              cy={pt.y + dragDelta.y}
+              r={4 / scale}
+              fill="white"
+              stroke="rgb(59,130,246)"
+              strokeWidth={1.5 / scale}
+            />
+          ))}
       </g>
     </svg>
   );

@@ -20,6 +20,8 @@ export interface YamlBaseShape {
   label?: string;
   stroke?: string;
   strokeWidth?: number;
+  /** Stroke dash pattern. Defaults to solid when omitted. */
+  strokeDash?: 'solid' | 'dashed' | 'dotted';
 }
 
 export interface YamlLineShape extends YamlBaseShape {

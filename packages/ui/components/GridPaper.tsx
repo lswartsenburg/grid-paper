@@ -45,6 +45,13 @@ export interface GridPaperProps {
    */
   onDocumentChange?: (doc: DrawingDocument) => void;
 
+  /**
+   * When true, the canvas is rendered in view-only mode: the toolbar is hidden,
+   * drawing tools are disabled, and the default interaction is pan/zoom only.
+   * Useful for embedded previews and public share pages.
+   */
+  readOnly?: boolean;
+
   /** Additional CSS class names applied to the root element. */
   className?: string;
 }
@@ -56,6 +63,7 @@ export interface GridPaperProps {
 export default function GridPaper({
   adapter,
   documentId,
+  readOnly,
   className,
 }: GridPaperProps) {
   const resolvedAdapter = adapter ?? getDefaultAdapter();
@@ -87,7 +95,11 @@ export default function GridPaper({
 
   return (
     <div className={rootClass}>
-      <CanvasEditor initialDoc={initialDoc} adapter={resolvedAdapter} />
+      <CanvasEditor
+        initialDoc={initialDoc}
+        adapter={resolvedAdapter}
+        readOnly={readOnly}
+      />
     </div>
   );
 }

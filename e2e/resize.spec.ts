@@ -45,6 +45,26 @@ async function getHandleCenters(page: Page) {
 }
 
 /**
+ * Returns the center coordinates of line endpoint handle circles.
+ * Endpoint circles are identified by their blue stroke and white fill,
+ * matching the styling in SelectionOverlay.
+ */
+async function getLineEndpointHandles(page: Page) {
+  return page.evaluate(() =>
+    [...document.querySelectorAll('svg circle')]
+      .filter(
+        (c) =>
+          c.getAttribute('stroke') === 'rgb(59,130,246)' &&
+          c.getAttribute('fill') === 'white'
+      )
+      .map((c) => {
+        const { x, y, width, height } = c.getBoundingClientRect();
+        return { cx: x + width / 2, cy: y + height / 2 };
+      })
+  );
+}
+
+/**
  * Returns the rendered bounding box of the drawn SVG <line> element.
  * Toolbar icon lines use stroke="currentColor"; drawn lines have a hex
  * strokeColor, so filtering by that distinguishes them.
@@ -271,12 +291,11 @@ test.describe('line resize', () => {
   });
 
   /**
-   * Draw a diagonal line, select it, drag one endpoint outward via a corner
-   * handle, and confirm the rendered line bounding box grew.
+   * Draw a diagonal line, select it, drag one endpoint outward via an endpoint
+   * handle circle, and confirm the rendered line bounding box grew.
+   * Line handles are circles at the actual endpoints (not bounding-box corners).
    */
-  test('dragging a corner handle moves the nearer endpoint', async ({
-    page,
-  }) => {
+  test('dragging an endpoint handle moves that endpoint', async ({ page }) => {
     // ── 1. Draw a diagonal line ──────────────────────────────────────────────
     await page.locator('[title="Line"]').click();
 
@@ -296,18 +315,18 @@ test.describe('line resize', () => {
 
     // ── 2. Select the line ───────────────────────────────────────────────────
     await page.getByTitle('Select').click();
-    // Click near the middle of the line (on the stroke)
     await page.mouse.click(cx, cy);
 
+    // Lines now show 2 circular endpoint handles, not 4 corner rects.
     await expect
-      .poll(() => getHandleCenters(page), { timeout: 3000 })
-      .toHaveLength(4);
+      .poll(() => getLineEndpointHandles(page), { timeout: 3000 })
+      .toHaveLength(2);
 
     const before = await getLineBounds(page);
     expect(before).not.toBeNull();
 
-    // ── 3. Drag the BR corner (highest cx+cy) outward ────────────────────────
-    const handles = await getHandleCenters(page);
+    // ── 3. Drag the bottom-right endpoint (highest cx+cy) outward ────────────
+    const handles = await getLineEndpointHandles(page);
     const br = handles.reduce((best, h) =>
       h.cx + h.cy > best.cx + best.cy ? h : best
     );
@@ -347,13 +366,13 @@ test.describe('line resize', () => {
     await page.mouse.click(cx, cy);
 
     await expect
-      .poll(() => getHandleCenters(page), { timeout: 3000 })
-      .toHaveLength(4);
+      .poll(() => getLineEndpointHandles(page), { timeout: 3000 })
+      .toHaveLength(2);
 
     const before = await getLineBounds(page);
     expect(before).not.toBeNull();
 
-    const handles = await getHandleCenters(page);
+    const handles = await getLineEndpointHandles(page);
     const br = handles.reduce((best, h) =>
       h.cx + h.cy > best.cx + best.cy ? h : best
     );

@@ -6,6 +6,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 <!-- END:nextjs-agent-rules -->
 
+## Environment Setup
+
+Run `nvm use` at the start of every session to activate the Node version pinned in `.nvmrc`.
+
 # Project Context: Paper Grid Graphing Tool
 
 A Next.js standalone frontend application that digitizes traditional paper grids for easy graphing. The codebase is fully open-source, highly modular, and optimized for easy community contributions.

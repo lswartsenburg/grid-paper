@@ -10,11 +10,28 @@ interface Props {
   dispatch: React.Dispatch<DrawingAction>;
   /** Keys already claimed by other shapes — used to block duplicates. */
   existingKeys?: Set<string>;
+  /** Called when the user clicks the delete button. */
+  onDelete?: () => void;
+  /** Called when the user clicks the duplicate button. */
+  onDuplicate?: () => void;
 }
 
-type StylePatch = Partial<Pick<VectorShape, 'strokeColor' | 'strokeWidth'>> & {
-  fillColor?: string;
-};
+type StylePatch = Partial<
+  Pick<VectorShape, 'strokeColor' | 'strokeWidth' | 'strokeDash'>
+> & { fillColor?: string };
+
+const PRESET_COLORS = [
+  '#000000',
+  '#495057',
+  '#868e96',
+  '#dee2e6',
+  '#e03131',
+  '#f08c00',
+  '#2f9e44',
+  '#1971c2',
+  '#ae3ec9',
+  '#e64980',
+];
 
 function Row({
   label,
@@ -76,15 +93,66 @@ function ColorSwatch({
   );
 }
 
+/** Three small buttons for selecting solid / dashed / dotted stroke style. */
+function StrokeDashSelector({
+  value,
+  onChange,
+}: {
+  value: VectorShape['strokeDash'];
+  onChange: (v: 'solid' | 'dashed' | 'dotted') => void;
+}) {
+  const current = value ?? 'solid';
+  const options: Array<{
+    id: 'solid' | 'dashed' | 'dotted';
+    title: string;
+    dash?: string;
+  }> = [
+    { id: 'solid', title: 'Solid' },
+    { id: 'dashed', title: 'Dashed', dash: '5 3' },
+    { id: 'dotted', title: 'Dotted', dash: '2 3' },
+  ];
+  return (
+    <div className="flex gap-0.5">
+      {options.map(({ id, title, dash }) => (
+        <button
+          key={id}
+          onClick={() => onChange(id)}
+          title={title}
+          className={`w-7 h-7 flex items-center justify-center rounded border transition-colors ${
+            current === id
+              ? 'border-blue-400 bg-blue-50 text-blue-600'
+              : 'border-zinc-200 text-zinc-500 hover:bg-zinc-50'
+          }`}
+        >
+          <svg viewBox="0 0 20 10" width="14" height="7" fill="none">
+            <line
+              x1="1"
+              y1="5"
+              x2="19"
+              y2="5"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeDasharray={dash}
+            />
+          </svg>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /**
- * Displays and edits stroke/fill properties of the currently selected shape.
- * Dispatches `UPDATE_SHAPE_STYLE` on every change.
+ * Displays and edits stroke/fill/style properties of the currently selected shape.
+ * Also exposes Delete and Duplicate actions via optional callbacks.
  */
 export default function PropertiesPanel({
   shape,
   layerId,
   dispatch,
   existingKeys,
+  onDelete,
+  onDuplicate,
 }: Props) {
   // Local draft for the key field — dispatches only on commit (blur / Enter)
   // to keep the undo history clean.
@@ -150,8 +218,56 @@ export default function PropertiesPanel({
 
   return (
     <div className="flex flex-col flex-1 overflow-y-auto py-2">
-      <div className="px-3 pb-2 text-xs text-zinc-400 uppercase tracking-wide font-semibold">
-        {shape.type}
+      {/* Header: shape type + action buttons */}
+      <div className="flex items-center justify-between px-3 pb-2">
+        <span className="text-xs text-zinc-400 uppercase tracking-wide font-semibold">
+          {shape.type}
+        </span>
+        <div className="flex items-center gap-0.5">
+          {onDuplicate && (
+            <button
+              onClick={onDuplicate}
+              title="Duplicate shape"
+              className="p-1 rounded hover:bg-zinc-100 text-zinc-500 hover:text-zinc-700 transition-colors"
+            >
+              {/* Copy icon */}
+              <svg
+                viewBox="0 0 16 16"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="5" y="5" width="8" height="8" rx="1" />
+                <path d="M3 11V3h8" />
+              </svg>
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              title="Delete shape"
+              className="p-1 rounded hover:bg-red-50 text-zinc-500 hover:text-red-500 transition-colors"
+            >
+              {/* Trash icon */}
+              <svg
+                viewBox="0 0 16 16"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M2 4h12M5 4V3h6v1M6 7v5M10 7v5M3 4l1 9h8l1-9" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       <Row label="Label">
@@ -227,10 +343,13 @@ export default function PropertiesPanel({
           step={0.5}
           value={shape.strokeWidth}
           onChange={(e) => update({ strokeWidth: Number(e.target.value) })}
-          className="w-16 text-xs border border-zinc-200 rounded px-1.5 py-1 text-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+          className="w-14 text-xs border border-zinc-200 rounded px-1.5 py-1 text-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
           title="Stroke width"
         />
-        <span className="text-xs text-zinc-400">px</span>
+        <StrokeDashSelector
+          value={shape.strokeDash}
+          onChange={(v) => update({ strokeDash: v })}
+        />
       </Row>
 
       {hasFill && (
@@ -252,6 +371,25 @@ export default function PropertiesPanel({
           </button>
         </Row>
       )}
+
+      {/* Preset color swatches — click to set stroke color */}
+      <div className="px-3 pt-1 pb-1">
+        <div className="flex flex-wrap gap-1">
+          {PRESET_COLORS.map((c) => (
+            <button
+              key={c}
+              onClick={() => update({ strokeColor: c })}
+              title={c}
+              className={`w-5 h-5 rounded border cursor-pointer transition-transform hover:scale-110 ${
+                shape.strokeColor === c
+                  ? 'border-blue-400 ring-1 ring-blue-300'
+                  : 'border-zinc-200'
+              }`}
+              style={{ background: c }}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

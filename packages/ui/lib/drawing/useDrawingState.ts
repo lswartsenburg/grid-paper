@@ -55,7 +55,9 @@ export type DrawingAction =
       type: 'UPDATE_SHAPE_STYLE';
       layerId: string;
       shapeId: string;
-      patch: Partial<Pick<VectorShape, 'strokeColor' | 'strokeWidth'>> & {
+      patch: Partial<
+        Pick<VectorShape, 'strokeColor' | 'strokeWidth' | 'strokeDash'>
+      > & {
         fillColor?: string;
       };
     }

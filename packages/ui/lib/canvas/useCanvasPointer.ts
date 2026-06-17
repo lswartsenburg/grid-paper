@@ -186,6 +186,13 @@ export function useCanvasPointer<T extends HTMLElement>(options: Options) {
 
     function handleKeyDown(e: KeyboardEvent) {
       if (e.code === 'Space' && !e.repeat && !isPanningRef.current) {
+        const tag = (document.activeElement as HTMLElement)?.tagName;
+        if (
+          tag === 'INPUT' ||
+          tag === 'TEXTAREA' ||
+          (document.activeElement as HTMLElement)?.isContentEditable
+        )
+          return;
         isSpaceDownRef.current = true;
         e.preventDefault();
       }

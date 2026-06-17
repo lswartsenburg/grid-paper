@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseYaml } from './parse';
 import { serializeToYaml } from './serialize';
-import type { DrawingDocument } from '../../types/canvas';
+import type { DrawingDocument, VectorShape } from '../../types/canvas';
 
 // Minimal stub — parseYaml only reads viewport, gridConfig, id, and timestamps.
 const BASE_DOC: DrawingDocument = {
@@ -230,7 +230,7 @@ layers:
         width: 5
         height: 4
 `);
-    expect(doc.layers[0].items[0].label).toBe('Room A');
+    expect((doc.layers[0].items[0] as VectorShape).label).toBe('Room A');
   });
 
   it('preserves label on a line', () => {
@@ -243,7 +243,7 @@ layers:
         from: [0, 0]
         to: [10, 0]
 `);
-    expect(doc.layers[0].items[0].label).toBe('baseline');
+    expect((doc.layers[0].items[0] as VectorShape).label).toBe('baseline');
   });
 
   it('label is undefined when omitted', () => {
@@ -255,7 +255,80 @@ layers:
         from: [0, 0]
         to: [5, 5]
 `);
-    expect(doc.layers[0].items[0].label).toBeUndefined();
+    expect((doc.layers[0].items[0] as VectorShape).label).toBeUndefined();
+  });
+});
+
+// ─── strokeDash field ────────────────────────────────────────────────────────
+
+describe('strokeDash field — parse', () => {
+  it('preserves strokeDash: dashed on a line', () => {
+    const doc = parse(`
+layers:
+  - name: L
+    shapes:
+      - type: line
+        from: [0, 0]
+        to: [5, 0]
+        strokeDash: dashed
+`);
+    expect((doc.layers[0].items[0] as VectorShape).strokeDash).toBe('dashed');
+  });
+
+  it('strokeDash is undefined when omitted', () => {
+    const doc = parse(`
+layers:
+  - name: L
+    shapes:
+      - type: line
+        from: [0, 0]
+        to: [5, 0]
+`);
+    expect((doc.layers[0].items[0] as VectorShape).strokeDash).toBeUndefined();
+  });
+});
+
+describe('strokeDash field — serialize', () => {
+  it('emits strokeDash for dashed lines', () => {
+    const doc = parse(`
+layers:
+  - name: L
+    shapes:
+      - type: line
+        from: [0, 0]
+        to: [5, 0]
+        strokeDash: dashed
+`);
+    expect(serializeToYaml(doc)).toContain('strokeDash: dashed');
+  });
+
+  it('omits strokeDash when solid (default)', () => {
+    const doc = parse(`
+layers:
+  - name: L
+    shapes:
+      - type: line
+        from: [0, 0]
+        to: [5, 0]
+        strokeDash: solid
+`);
+    expect(serializeToYaml(doc)).not.toContain('strokeDash:');
+  });
+
+  it('round-trips strokeDash: dotted through parse → serialize → parse', () => {
+    const original = `title: "Test"
+layers:
+  - name: "L"
+    shapes:
+      - type: rect
+        origin: [0, 0]
+        width: 4
+        height: 3
+        strokeDash: dotted
+`;
+    const doc1 = parse(original);
+    const doc2 = parse(serializeToYaml(doc1));
+    expect((doc2.layers[0].items[0] as VectorShape).strokeDash).toBe('dotted');
   });
 });
 
@@ -304,6 +377,6 @@ layers:
     const doc1 = parse(original);
     const reserialised = serializeToYaml(doc1);
     const doc2 = parse(reserialised);
-    expect(doc2.layers[0].items[0].label).toBe('my-label');
+    expect((doc2.layers[0].items[0] as VectorShape).label).toBe('my-label');
   });
 });

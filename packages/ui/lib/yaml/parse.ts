@@ -43,6 +43,7 @@ function parseItem(raw: YamlItem): LayerItem {
     ...(raw.label !== undefined && { label: raw.label }),
     strokeColor: raw.stroke ?? DEFAULT_STROKE,
     strokeWidth: raw.strokeWidth ?? DEFAULT_STROKE_WIDTH,
+    ...(raw.strokeDash !== undefined && { strokeDash: raw.strokeDash }),
   };
 
   switch (raw.type) {

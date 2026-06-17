@@ -37,6 +37,10 @@ function shapeLines(shape: VectorShape, level: number): string[] {
     shape.strokeWidth !== 1.5
       ? `${i}strokeWidth: ${round(shape.strokeWidth)}`
       : null;
+  const dashLine =
+    shape.strokeDash && shape.strokeDash !== 'solid'
+      ? `${i}strokeDash: ${shape.strokeDash}`
+      : null;
 
   if (shape.key !== undefined) lines.push(`${i}key: "${shape.key}"`);
   if (shape.label !== undefined) lines.push(`${i}label: "${shape.label}"`);
@@ -78,6 +82,7 @@ function shapeLines(shape: VectorShape, level: number): string[] {
 
   if (strokeLine) lines.push(strokeLine);
   if (widthLine) lines.push(widthLine);
+  if (dashLine) lines.push(dashLine);
 
   return lines;
 }

@@ -53,7 +53,11 @@ export default function ShapeElement({
     vectorEffect: 'non-scaling-stroke' as const,
     strokeDasharray: dashed
       ? `${shape.strokeWidth * 4} ${shape.strokeWidth * 2}`
-      : undefined,
+      : shape.strokeDash === 'dashed'
+        ? `${shape.strokeWidth * 6} ${shape.strokeWidth * 3}`
+        : shape.strokeDash === 'dotted'
+          ? `${shape.strokeWidth * 1.5} ${shape.strokeWidth * 3}`
+          : undefined,
     opacity,
   };
 
